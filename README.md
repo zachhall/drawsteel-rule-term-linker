@@ -8,23 +8,17 @@ Backlinks Draw Steel rule terms in your notes to their definitions in a glossary
 
 ## Features
 
-- Creates `ds-glossary.md` at your vault root the first time you enable the plugin, if no glossary note already exists — one heading per term (e.g. `### Prone`), transcribed from the DS Compendium's Introduction chapter. Runs once only; it never overwrites an existing note, even if you later delete or rename the one it created.
-- Locks the glossary note against normal editing (typing, paste, drag-and-drop, cut, undo all become no-ops in its editor) — it's meant to be a stable backlink target, not something you add content to directly. Reading view, Page Preview, and backlinks are all unaffected, since none of those depend on the editor being writable. To add a new term, point a "Rule terms" entry (below) at any note in your vault instead of editing this one.
-- Ships with a default term list — the ~240 bolded glossary entries from the Compendium's Introduction chapter — resolved against the headings actually present in your glossary note. A few extra defaults with an explicit target round it out where the display term differs from its heading's title (e.g. "Charge" → `### Charge Main Action`) or the target lives outside the glossary (e.g. "Surges" → the Compendium's Classes chapter).
-- Supports aliases — a term with no heading of its own that links wherever another term does (e.g. "XP" links to `### Experience`, ships as a default alias).
-- Renders every mention of a known rule term as a link straight to its heading in the glossary note (`ds-glossary#Prone`), live at view time — no note content is ever edited, so it works on hand-written notes, imported hero notes, and the glossary note itself alike, and stays current the moment a heading changes.
-- Links get Obsidian's native Page Preview (which scopes the hover popup to that heading) and click-to-navigate, same as a hand-written `[[wikilink#Heading]]`.
-- Skips code blocks/spans and text already inside a link, so it never double-links or mangles fenced code.
-- Skips headings (H2/H3), a draw-steel-elements Ability's flavor text and its `Source:` attribution line (added by drawsteel-hero-importer), and the contents of `ds-skills`/`ds-stamina` blocks — none of those are meant to be read as rule-term prose.
-- Within a single Ability block, only the first mention of each term links — later repeats of e.g. "Prone" in the same Ability's effect text stay plain. Outside Ability blocks, every mention still links.
-- Settings let you point at a non-default glossary note location, blacklist folders that should never be scanned, and remove/add terms from the list (custom additions resolve to a matching heading on the next rebuild too).
-- The glossary note itself is never linked (it's the link target).
+- Creates and maintains a read-only glossary note (`ds-glossary.md`) as a stable link target, pre-filled from the DS Compendium.
+- Automatically links every mention of a known rule term to its definition, live at view time, with native hover preview — no note content is ever edited.
+- Ships with a default set of rule terms and aliases (e.g. "XP" → "Experience"), fully customizable in settings.
+- Skips code, existing links, headings, and other non-prose content, and avoids re-linking the same term repeatedly within one Ability.
+
+See [DOCUMENTATION.md](DOCUMENTATION.md) for the full details on how linking, terms, and aliases work.
 
 ## Limitations
 
 - Term matching is literal text, case-insensitive — it does not understand plurals, inflections, or synonyms unless you add them as separate term entries.
-- A term only links if a heading with that exact name exists in the glossary note; renaming or removing a heading silently drops the link for that term until you rebuild.
-- Reading view / Live Preview rendering only, per Obsidian's markdown post-processor — raw source mode and non-Obsidian renderers (e.g. GitHub) show the plain term text.
+- Reading view / Live Preview rendering only — raw source mode and non-Obsidian renderers (e.g. GitHub) show the plain term text.
 
 ## Installation
 
@@ -42,19 +36,20 @@ Backlinks Draw Steel rule terms in your notes to their definitions in a glossary
 
 ## Usage
 
-1. Enable the plugin. If no glossary note exists in your vault yet, `ds-glossary.md` is created at the vault root automatically (skip this if you'd rather write your own — just make sure it exists before enabling, one `### Term` heading per entry).
-2. Open this plugin's settings and click **Rebuild from glossary** to resolve the default term list against your glossary's headings (it also auto-resolves once on first load).
-3. Open or reload any note — matching terms render as links automatically.
-4. In settings, delete any default terms you don't want linked, or add your own.
+1. Enable the plugin — a `ds-glossary.md` note is created automatically if you don't already have one.
+2. Open or reload any note; matching terms render as links automatically.
+3. In settings, remove any default terms you don't want linked, or add your own.
 
 ## Settings
 
-- **Glossary note location** — vault path to the glossary note. Defaults to `ds-glossary.md` at the vault root; use **Auto-detect** to search the vault for a note named `ds-glossary` by name.
-- **Restore default glossary note** — recreates the default glossary note at the configured location and rebuilds the term index against it. The note is locked against normal editing (see Features), so this is mainly an edge-case recovery tool rather than something you'd need routinely. Warns and asks for confirmation first if a note already exists there, since continuing overwrites it.
-- **Blacklisted folders** — notes under these folders (and subfolders) are never scanned or linked. Defaults to `DS Compendium` on a new install, since it's reference material that already cross-references itself; doesn't affect notes elsewhere linking *into* the Compendium (e.g. the default "Surges" term).
-- **Rule terms** — the term → glossary heading table used for linking, seeded from the default list. Delete entries you don't want, edit a target (`ds-glossary#Heading`), or add your own term.
-- **Term aliases** — a term → canonical-term table for terms with no heading of their own (e.g. `XP` → `Experience`). Resolved to the canonical term's actual target automatically when added (a rebuild runs behind the scenes), so it stays in sync if that target changes and links right away without a separate manual rebuild.
-- **Advanced settings** (collapsed by default, at the bottom) — **Rebuild term index**, which resolves the default term list and aliases against the glossary note's current headings and drops any that no longer resolve. Adding an alias or restoring the default glossary note already trigger this automatically, so it's only needed by hand for troubleshooting — e.g. the glossary note's headings changed some other way (edited outside Obsidian, or synced in from a device without this plugin).
+- **Glossary note location** — where the glossary note lives, with auto-detect.
+- **Restore default glossary note** — recreate it from the bundled default.
+- **Blacklisted folders** — folders never scanned for rule terms (defaults to `DS Compendium`).
+- **Rule terms** — the term → target table used for linking.
+- **Term aliases** — terms that link wherever another term does.
+- **Advanced settings** — troubleshooting tools, collapsed by default.
+
+See [DOCUMENTATION.md](DOCUMENTATION.md) for what each setting actually does.
 
 ## Building from source
 
