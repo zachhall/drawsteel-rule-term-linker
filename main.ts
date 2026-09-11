@@ -35,6 +35,9 @@ const SKIP_PARENT_SELECTOR = [
 // (its key text) rather than a selector to tell it apart from a real effect.
 const EFFECT_KEY_SELECTOR = ".ds-pr-effect-key";
 
+// Term-detection scope for "first occurrence only" dedup: one Ability block.
+const FEATURE_CONTAINER_SELECTOR = ".ds-feature-container";
+
 function isSourceEffect(parent: Element): boolean {
 	const container = parent.closest(".ds-effect-container");
 	const key = container?.querySelector(EFFECT_KEY_SELECTOR);
@@ -196,15 +199,36 @@ export default class RuleTermLinkerPlugin extends Plugin {
 			}
 		}
 
+		const linkedByFeature = new Map<Element, Set<string>>();
 		for (const textNode of targets) {
-			this.replaceTextNode(textNode, sourcePath);
+			this.replaceTextNode(textNode, sourcePath, linkedByFeature);
 		}
 	}
 
-	private replaceTextNode(textNode: Text, sourcePath: string): void {
+	/**
+	 * Within a single Ability block (`.ds-feature-container`), only the
+	 * first mention of each term gets linked — repeats of "Prone" further
+	 * down the same Ability stay plain text. Outside any Ability block,
+	 * every mention still links; `linkedByFeature` only tracks state per
+	 * container, so unrelated prose is never affected by it.
+	 */
+	private replaceTextNode(textNode: Text, sourcePath: string, linkedByFeature: Map<Element, Set<string>>): void {
 		const text = textNode.textContent ?? "";
-		const matches = findTermMatches(text, this.settings.terms);
+		let matches = findTermMatches(text, this.settings.terms);
 		if (matches.length === 0) return;
+
+		const container = textNode.parentElement?.closest(FEATURE_CONTAINER_SELECTOR) ?? undefined;
+		if (container) {
+			const seen = linkedByFeature.get(container) ?? new Set<string>();
+			matches = matches.filter((match) => {
+				const key = match.matchedText.toLowerCase();
+				if (seen.has(key)) return false;
+				seen.add(key);
+				return true;
+			});
+			linkedByFeature.set(container, seen);
+			if (matches.length === 0) return;
+		}
 
 		const fragment = createFragment((frag) => {
 			let cursor = 0;

@@ -14,6 +14,7 @@ Backlinks Draw Steel rule terms in your notes to their definitions in a glossary
 - Links get Obsidian's native Page Preview (which scopes the hover popup to that heading) and click-to-navigate, same as a hand-written `[[wikilink#Heading]]`.
 - Skips code blocks/spans and text already inside a link, so it never double-links or mangles fenced code.
 - Skips headings (H2/H3), a draw-steel-elements Ability's flavor text and its `Source:` attribution line (added by drawsteel-hero-importer), and the contents of `ds-skills`/`ds-stamina` blocks — none of those are meant to be read as rule-term prose.
+- Within a single Ability block, only the first mention of each term links — later repeats of e.g. "Prone" in the same Ability's effect text stay plain. Outside Ability blocks, every mention still links.
 - Settings let you point at a non-default glossary note location, blacklist folders that should never be scanned, and remove/add terms from the list (custom additions resolve to a matching heading on the next rebuild too).
 - The glossary note itself is never linked (it's the link target).
 
