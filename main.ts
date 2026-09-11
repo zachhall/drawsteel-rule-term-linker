@@ -1,6 +1,6 @@
 import { MarkdownPostProcessorContext, Notice, Plugin, TFile, normalizePath } from "obsidian";
 import { DEFAULT_ALIASES } from "./aliases";
-import { DEFAULT_TERMS } from "./default-terms";
+import { DEFAULT_TERM_TARGETS, DEFAULT_TERMS } from "./default-terms";
 import GLOSSARY_TEMPLATE from "./ds-glossary.md";
 import { reportError } from "./errors";
 import { locateGlossaryFile, resolveTermHeadings } from "./glossary";
@@ -230,7 +230,11 @@ export default class RuleTermLinkerPlugin extends Plugin {
 			if (target) resolvedAliases[alias] = target;
 		}
 
-		const resolved = { ...resolvedTerms, ...resolvedAliases };
+		// DEFAULT_TERM_TARGETS are pre-verified explicit targets (a different
+		// display term than the glossary heading it points at, or a target
+		// outside the glossary entirely) — merged in as-is rather than looked
+		// up, the same trust level as a manually-typed Rule terms entry.
+		const resolved = { ...DEFAULT_TERM_TARGETS, ...resolvedTerms, ...resolvedAliases };
 
 		// A term pointing at this glossary note whose heading is no longer
 		// there (renamed, deleted) is pruned rather than left dangling —

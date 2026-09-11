@@ -244,3 +244,17 @@ export const DEFAULT_TERMS: string[] = [
 	"Wode Elf",
 	"Wrath",
 ];
+
+/**
+ * Default terms with an explicit target instead of a name-matched heading —
+ * either because the desired term text differs from the glossary heading's
+ * own title (e.g. "Charge" for the "Charge Main Action" heading), or
+ * because the target isn't in the glossary at all (a Compendium chapter's
+ * own heading). Merged directly into the resolved term set on every
+ * rebuild, same as DEFAULT_TERMS but skipping the by-name heading lookup.
+ */
+export const DEFAULT_TERM_TARGETS: Record<string, string> = {
+	Charge: "ds-glossary#Charge Main Action",
+	Surges: "DS Compendium/Rules/Chapters/Classes#Surges",
+	Disengage: "ds-glossary#Disengage Move Action",
+};
