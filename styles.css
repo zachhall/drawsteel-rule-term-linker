@@ -1,0 +1,7 @@
+/*
+ * Loaded automatically by Obsidian when the plugin is enabled, and unloaded
+ * when it is disabled. Keep ALL styling here -- never assign styles from
+ * JavaScript (add a class instead). Prefer Obsidian's theme CSS variables
+ * (--text-*, --background-*, --interactive-accent, --radius-*, ...) over
+ * hardcoded values so the plugin adapts to the user's theme.
+ */
