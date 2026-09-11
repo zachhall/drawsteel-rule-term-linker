@@ -40,6 +40,11 @@ const EFFECT_KEY_SELECTOR = ".ds-pr-effect-key";
 // Term-detection scope for "first occurrence only" dedup: one Ability block.
 const FEATURE_CONTAINER_SELECTOR = ".ds-feature-container";
 
+// Toggled on <body> to match the "Dotted underline style" setting — styled
+// in styles.css against .ds-rule-term-link, so it applies live to every
+// already-rendered link via CSS alone, with no re-render needed.
+const DOTTED_UNDERLINE_BODY_CLASS = "ds-rule-term-linker-dotted-underline";
+
 function isSourceEffect(parent: Element): boolean {
 	const container = parent.closest(".ds-effect-container");
 	const key = container?.querySelector(EFFECT_KEY_SELECTOR);
@@ -71,6 +76,7 @@ export default class RuleTermLinkerPlugin extends Plugin {
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
+		this.applyDottedUnderlineClass();
 		this.addSettingTab(new RuleLinkerSettingTab(this.app, this));
 
 		if (!this.settings.glossarySeeded) {
@@ -99,7 +105,7 @@ export default class RuleTermLinkerPlugin extends Plugin {
 	}
 
 	onunload(): void {
-		// No resources held outside the plugin lifecycle to release.
+		document.body.classList.remove(DOTTED_UNDERLINE_BODY_CLASS);
 	}
 
 	async loadSettings(): Promise<void> {
@@ -118,6 +124,11 @@ export default class RuleTermLinkerPlugin extends Plugin {
 
 	async saveSettings(): Promise<void> {
 		await this.saveData(this.settings);
+		this.applyDottedUnderlineClass();
+	}
+
+	private applyDottedUnderlineClass(): void {
+		document.body.classList.toggle(DOTTED_UNDERLINE_BODY_CLASS, this.settings.dottedUnderline);
 	}
 
 	private getGlossaryFile(): TFile | null {

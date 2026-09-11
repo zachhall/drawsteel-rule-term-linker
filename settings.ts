@@ -21,6 +21,8 @@ export interface RuleLinkerSettings {
 	aliases: Record<string, string>;
 	/** Set once the plugin has attempted to seed the default glossary note, so it only ever does so on first enable. */
 	glossarySeeded: boolean;
+	/** Render this plugin's own links with a dotted underline (solid on hover) instead of the theme's default internal-link styling. */
+	dottedUnderline: boolean;
 }
 
 export const DEFAULT_SETTINGS: RuleLinkerSettings = {
@@ -29,6 +31,7 @@ export const DEFAULT_SETTINGS: RuleLinkerSettings = {
 	terms: {},
 	aliases: {},
 	glossarySeeded: false,
+	dottedUnderline: false,
 };
 
 export class RuleLinkerSettingTab extends PluginSettingTab {
@@ -76,6 +79,18 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 					new Notice(`Found glossary note at "${file.path}".`);
 					this.display();
+				})
+			);
+
+		new Setting(containerEl)
+			.setName("Dotted underline style")
+			.setDesc(
+				"Render this plugin's own links with a dotted underline, switching to a solid underline on hover, instead of the theme's default internal-link styling. Only affects links this plugin creates — manually written [[wikilinks]] and links from other plugins are untouched."
+			)
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.dottedUnderline).onChange(async (value) => {
+					this.plugin.settings.dottedUnderline = value;
+					await this.plugin.saveSettings();
 				})
 			);
 
