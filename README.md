@@ -59,6 +59,7 @@ See [DOCUMENTATION.md](DOCUMENTATION.md) for what each setting actually does.
 npm install
 npm run dev    # watch build
 npm run build  # production build
+npm run lint   # eslint-plugin-obsidianmd (developer guideline checks)
 npm test       # Obsidian community-directory compliance checks (tests/)
 ```
 

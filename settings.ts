@@ -73,7 +73,7 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 				render: (setting) => this.renderGlossaryLocation(setting),
 			},
 			{
-				name: "Subtle Styling",
+				name: "Subtle styling",
 				render: (setting) => this.renderSubtleStyling(setting),
 			},
 			{
@@ -153,7 +153,7 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 
 	private renderSubtleStyling(setting: Setting): void {
 		setting
-			.setName("Subtle Styling")
+			.setName("Subtle styling")
 			.setDesc(
 				"Reduce the amount of styling on links rendered by this plugin, restricted to just a dotted underline. This does not change how manually written [[wikilinks]] or any other links are styled."
 			)
@@ -207,7 +207,7 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 		this.plugin.settings.blacklistedFolders.forEach((folder, index) => {
 			new Setting(containerEl).addText((text) =>
 				text
-					.setPlaceholder("Folder/Path")
+					.setPlaceholder("Folder/path")
 					.setValue(folder)
 					.onChange(async (value) => {
 						this.plugin.settings.blacklistedFolders[index] = value.trim();
