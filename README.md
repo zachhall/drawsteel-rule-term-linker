@@ -9,6 +9,7 @@ Backlinks Draw Steel rule terms in your notes to their definitions in a glossary
 ## Features
 
 - Creates `ds-glossary.md` at your vault root the first time you enable the plugin, if no glossary note already exists — one heading per term (e.g. `### Prone`), transcribed from the DS Compendium's Introduction chapter. Runs once only; it never overwrites an existing note, even if you later delete or rename the one it created.
+- Locks the glossary note against normal editing (typing, paste, drag-and-drop, cut, undo all become no-ops in its editor) — it's meant to be a stable backlink target, not something you add content to directly. Reading view, Page Preview, and backlinks are all unaffected, since none of those depend on the editor being writable. To add a new term, point a "Rule terms" entry (below) at any note in your vault instead of editing this one.
 - Ships with a default term list — the ~240 bolded glossary entries from the Compendium's Introduction chapter — resolved against the headings actually present in your glossary note.
 - Supports aliases — a term with no heading of its own that links wherever another term does (e.g. "XP" links to `### Experience`, ships as a default alias).
 - Renders every mention of a known rule term as a link straight to its heading in the glossary note (`ds-glossary#Prone`), live at view time — no note content is ever edited, so it works on hand-written notes, imported hero notes, and the glossary note itself alike, and stays current the moment a heading changes.
@@ -49,8 +50,8 @@ Backlinks Draw Steel rule terms in your notes to their definitions in a glossary
 ## Settings
 
 - **Glossary note location** — vault path to the glossary note. Defaults to `ds-glossary.md` at the vault root; use **Auto-detect** to search the vault for a note named `ds-glossary` by name.
-- **Restore default glossary note** — recreates the default glossary note at the configured location. Warns and asks for confirmation first if a note already exists there, since continuing overwrites it and discards any edits you've made.
-- **Rebuild term index** — resolves the default term list, plus anything you've added, against headings currently in the glossary note. Also drops any term that used to point at a glossary heading that's since been renamed or removed, so it stops linking to a dead heading.
+- **Restore default glossary note** — recreates the default glossary note at the configured location. The note is locked against normal editing (see Features), so this is mainly an edge-case recovery tool rather than something you'd need routinely. Warns and asks for confirmation first if a note already exists there, since continuing overwrites it.
+- **Rebuild term index** — resolves the default term list, plus anything you've added, against headings currently in the glossary note. Also drops any term that used to point at a glossary heading that's since been renamed or removed, so it stops linking to a dead heading. Since the note itself is locked, you'll mainly need this after using Restore default glossary note above, after adding a new alias, or if the note's headings changed some other way (e.g. before the note existed, or edited outside Obsidian).
 - **Blacklisted folders** — notes under these folders (and subfolders) are never scanned or linked.
 - **Rule terms** — the term → glossary heading table used for linking, seeded from the default list. Delete entries you don't want, edit a target (`ds-glossary#Heading`), or add your own term.
 - **Term aliases** — a term → canonical-term table for terms with no heading of their own (e.g. `XP` → `Experience`). Resolved to the canonical term's actual target on rebuild, so it stays in sync if that target changes.

@@ -5,6 +5,7 @@ import GLOSSARY_TEMPLATE from "./ds-glossary.md";
 import { reportError } from "./errors";
 import { locateGlossaryFile, resolveTermHeadings } from "./glossary";
 import { findTermMatches } from "./linker";
+import { createGlossaryReadOnlyExtension } from "./readonly-glossary";
 import {
 	DEFAULT_GLOSSARY_BASENAME,
 	DEFAULT_GLOSSARY_PATH,
@@ -93,6 +94,8 @@ export default class RuleTermLinkerPlugin extends Plugin {
 		this.registerMarkdownPostProcessor((el, ctx) => {
 			this.processNode(el, ctx);
 		});
+
+		this.registerEditorExtension(createGlossaryReadOnlyExtension((path) => this.isGlossaryPath(path)));
 	}
 
 	onunload(): void {
@@ -228,9 +231,13 @@ export default class RuleTermLinkerPlugin extends Plugin {
 		}
 	}
 
-	private isExcluded(filePath: string): boolean {
+	private isGlossaryPath(filePath: string): boolean {
 		const glossaryPath = this.getGlossaryFile()?.path ?? this.settings.glossaryPath;
-		if (normalizePath(filePath) === normalizePath(glossaryPath)) return true;
+		return normalizePath(filePath) === normalizePath(glossaryPath);
+	}
+
+	private isExcluded(filePath: string): boolean {
+		if (this.isGlossaryPath(filePath)) return true;
 		return this.settings.blacklistedFolders.some((folder) => isWithinFolder(filePath, folder));
 	}
 
