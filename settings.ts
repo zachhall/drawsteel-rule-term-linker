@@ -1,5 +1,7 @@
 import { App, Notice, PluginSettingTab, Setting, normalizePath } from "obsidian";
 import type RuleTermLinkerPlugin from "./main";
+import { ConfirmModal } from "./confirm-modal";
+import { reportError } from "./errors";
 import { locateGlossaryFile, resolveTermHeadings } from "./glossary";
 import { DEFAULT_TERMS } from "./default-terms";
 
@@ -63,6 +65,37 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 					new Notice(`Found glossary note at "${file.path}".`);
 					this.display();
 				})
+			);
+
+		new Setting(containerEl)
+			.setName("Restore default glossary note")
+			.setDesc(
+				"Recreate the default glossary note at the location above. If a note already exists there, you'll be asked to confirm before it's overwritten."
+			)
+			.addButton((button) =>
+				button
+					.setButtonText("Restore default glossary note")
+					.setWarning()
+					.onClick(async () => {
+						const path = normalizePath(this.plugin.settings.glossaryPath || DEFAULT_GLOSSARY_PATH);
+						const existing = this.plugin.app.vault.getAbstractFileByPath(path);
+
+						const restore = () => {
+							this.plugin.restoreDefaultGlossaryNote().catch(reportError("restore default glossary note"));
+						};
+
+						if (existing) {
+							new ConfirmModal(
+								this.plugin.app,
+								"Overwrite existing glossary note?",
+								`Continuing will rewrite "${path}" to its default state, potentially losing any changes you've made to it. This can't be undone.`,
+								"Overwrite",
+								restore
+							).open();
+						} else {
+							restore();
+						}
+					})
 			);
 
 		new Setting(containerEl)

@@ -1,6 +1,7 @@
 import { MarkdownPostProcessorContext, Notice, Plugin, TFile, normalizePath } from "obsidian";
 import { DEFAULT_TERMS } from "./default-terms";
 import GLOSSARY_TEMPLATE from "./ds-glossary.md";
+import { reportError } from "./errors";
 import { locateGlossaryFile, resolveTermHeadings } from "./glossary";
 import { findTermMatches } from "./linker";
 import {
@@ -12,10 +13,6 @@ import {
 } from "./settings";
 
 const SKIP_PARENT_SELECTOR = "code, pre, a, button, input, textarea, select";
-
-export function reportError(context: string): (err: unknown) => void {
-	return (err: unknown) => console.error(`Draw Steel Rule Term Linker: ${context} failed`, err);
-}
 
 function isWithinFolder(filePath: string, folderPath: string): boolean {
 	if (!folderPath) return false;
@@ -91,6 +88,27 @@ export default class RuleTermLinkerPlugin extends Plugin {
 		await this.app.vault.create(path, GLOSSARY_TEMPLATE);
 		this.settings.glossaryPath = path;
 		new Notice(`Draw Steel Rule Term Linker: created "${path}" with the default glossary. See settings to move it.`);
+	}
+
+	/**
+	 * Recreates the glossary note at its configured path from the bundled
+	 * default template, overwriting whatever is there. Callers (the settings
+	 * tab) are responsible for confirming with the user first when a note
+	 * already exists at that path.
+	 */
+	async restoreDefaultGlossaryNote(): Promise<void> {
+		const path = normalizePath(this.settings.glossaryPath || DEFAULT_GLOSSARY_PATH);
+		const existing = this.app.vault.getAbstractFileByPath(path);
+
+		if (existing instanceof TFile) {
+			await this.app.vault.process(existing, () => GLOSSARY_TEMPLATE);
+		} else {
+			await this.app.vault.create(path, GLOSSARY_TEMPLATE);
+		}
+
+		this.settings.glossaryPath = path;
+		await this.saveSettings();
+		new Notice(`Restored the default glossary note at "${path}".`);
 	}
 
 	private async tryAutoIndex(): Promise<void> {

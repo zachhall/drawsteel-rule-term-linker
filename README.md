@@ -46,6 +46,7 @@ Backlinks Draw Steel rule terms in your notes to their definitions in a glossary
 ## Settings
 
 - **Glossary note location** — vault path to the glossary note. Defaults to `ds-glossary.md` at the vault root; use **Auto-detect** to search the vault for a note named `ds-glossary` by name.
+- **Restore default glossary note** — recreates the default glossary note at the configured location. Warns and asks for confirmation first if a note already exists there, since continuing overwrites it and discards any edits you've made.
 - **Rebuild term index** — resolves the default term list, plus anything you've added, against headings currently in the glossary note.
 - **Blacklisted folders** — notes under these folders (and subfolders) are never scanned or linked.
 - **Rule terms** — the term → glossary heading table used for linking, seeded from the default list. Delete entries you don't want, edit a target (`ds-glossary#Heading`), or add your own term.
