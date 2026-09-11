@@ -1,18 +1,19 @@
 import { App, Notice, PluginSettingTab, Setting, normalizePath } from "obsidian";
 import type RuleTermLinkerPlugin from "./main";
-import { locateCompendiumFolder, resolveTermPaths } from "./compendium";
+import { locateGlossaryFile, resolveTermHeadings } from "./glossary";
 import { DEFAULT_TERMS } from "./default-terms";
 
-export const DEFAULT_COMPENDIUM_PATH = "DS Compendium";
+export const DEFAULT_GLOSSARY_PATH = "ds-glossary.md";
+export const DEFAULT_GLOSSARY_BASENAME = "ds-glossary";
 
 export interface RuleLinkerSettings {
-	compendiumPath: string;
+	glossaryPath: string;
 	blacklistedFolders: string[];
 	terms: Record<string, string>;
 }
 
 export const DEFAULT_SETTINGS: RuleLinkerSettings = {
-	compendiumPath: DEFAULT_COMPENDIUM_PATH,
+	glossaryPath: DEFAULT_GLOSSARY_PATH,
 	blacklistedFolders: [],
 	terms: {},
 };
@@ -30,33 +31,33 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName("Compendium location")
+			.setName("Glossary note location")
 			.setDesc(
-				`Vault path to the DS Compendium folder installed via the "Draw Steel Elements" plugin. Defaults to "${DEFAULT_COMPENDIUM_PATH}" at the vault root.`
+				`Vault path to the glossary note that terms link to, with one heading per term. Defaults to "${DEFAULT_GLOSSARY_PATH}" at the vault root.`
 			)
 			.addText((text) =>
 				text
-					.setPlaceholder(DEFAULT_COMPENDIUM_PATH)
-					.setValue(this.plugin.settings.compendiumPath)
+					.setPlaceholder(DEFAULT_GLOSSARY_PATH)
+					.setValue(this.plugin.settings.glossaryPath)
 					.onChange(async (value) => {
-						this.plugin.settings.compendiumPath = value.trim() || DEFAULT_COMPENDIUM_PATH;
+						this.plugin.settings.glossaryPath = value.trim() || DEFAULT_GLOSSARY_PATH;
 						await this.plugin.saveSettings();
 					})
 			)
 			.addButton((button) =>
 				button.setButtonText("Auto-detect").onClick(async () => {
-					const folder = locateCompendiumFolder(
+					const file = locateGlossaryFile(
 						this.plugin.app,
-						this.plugin.settings.compendiumPath,
-						DEFAULT_COMPENDIUM_PATH
+						this.plugin.settings.glossaryPath,
+						DEFAULT_GLOSSARY_BASENAME
 					);
-					if (!folder) {
-						new Notice("Could not find a DS Compendium folder in this vault.");
+					if (!file) {
+						new Notice("Could not find a glossary note in this vault.");
 						return;
 					}
-					this.plugin.settings.compendiumPath = folder.path;
+					this.plugin.settings.glossaryPath = file.path;
 					await this.plugin.saveSettings();
-					new Notice(`Found Compendium at "${folder.path}".`);
+					new Notice(`Found glossary note at "${file.path}".`);
 					this.display();
 				})
 			);
@@ -64,25 +65,26 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Rebuild term index")
 			.setDesc(
-				"Resolve the default rule term list (plus any terms you've added below) against notes in the Compendium."
+				"Resolve the default rule term list (plus any terms you've added below) against headings in the glossary note."
 			)
 			.addButton((button) =>
 				button
-					.setButtonText("Rebuild from Compendium")
+					.setButtonText("Rebuild from glossary")
 					.setCta()
 					.onClick(async () => {
-						const folder = locateCompendiumFolder(
+						const file = locateGlossaryFile(
 							this.plugin.app,
-							this.plugin.settings.compendiumPath,
-							DEFAULT_COMPENDIUM_PATH
+							this.plugin.settings.glossaryPath,
+							DEFAULT_GLOSSARY_BASENAME
 						);
-						if (!folder) {
-							new Notice("Could not find the Compendium folder. Set its location above first.");
+						if (!file) {
+							new Notice("Could not find the glossary note. Set its location above first.");
 							return;
 						}
 						const wantedNames = new Set([...DEFAULT_TERMS, ...Object.keys(this.plugin.settings.terms)]);
-						const resolved = resolveTermPaths(folder, wantedNames);
+						const resolved = resolveTermHeadings(this.plugin.app, file, wantedNames);
 						this.plugin.settings.terms = { ...this.plugin.settings.terms, ...resolved };
+						this.plugin.settings.glossaryPath = file.path;
 						await this.plugin.saveSettings();
 						new Notice(`Resolved ${Object.keys(resolved).length} of ${wantedNames.size} rule terms.`);
 						this.display();
@@ -126,7 +128,7 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 
 		containerEl.createEl("h3", { text: `Rule terms (${Object.keys(this.plugin.settings.terms).length})` });
 		containerEl.createEl("p", {
-			text: "Term to match in your notes, and the Compendium note it links to. Seeded from a default glossary list; remove any you don't want, or add your own — Rebuild from the Compendium (above) resolves target paths for anything new.",
+			text: "Term to match in your notes, and the glossary heading it links to. Seeded from a default glossary list; remove any you don't want, or add your own — Rebuild from glossary (above) resolves target headings for anything new.",
 			cls: "setting-item-description",
 		});
 
@@ -136,7 +138,7 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 				.setName(term)
 				.addText((text) =>
 					text
-						.setPlaceholder("Compendium/Path/To/Note")
+						.setPlaceholder("ds-glossary#Heading")
 						.setValue(path)
 						.onChange(async (value) => {
 							this.plugin.settings.terms[term] = normalizePath(value.trim());
@@ -160,9 +162,7 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Add term")
 			.addText((text) => text.setPlaceholder("Term").onChange((value) => (newTerm = value.trim())))
-			.addText((text) =>
-				text.setPlaceholder("Compendium/Path/To/Note").onChange((value) => (newPath = value.trim()))
-			)
+			.addText((text) => text.setPlaceholder("ds-glossary#Heading").onChange((value) => (newPath = value.trim())))
 			.addButton((button) =>
 				button.setButtonText("Add").onClick(async () => {
 					if (!newTerm || !newPath) {

@@ -1,8 +1,8 @@
-import { MarkdownPostProcessorContext, Notice, Plugin, TFolder, normalizePath } from "obsidian";
-import { locateCompendiumFolder, resolveTermPaths } from "./compendium";
+import { MarkdownPostProcessorContext, Notice, Plugin, TFile, normalizePath } from "obsidian";
 import { DEFAULT_TERMS } from "./default-terms";
+import { locateGlossaryFile, resolveTermHeadings } from "./glossary";
 import { findTermMatches } from "./linker";
-import { DEFAULT_COMPENDIUM_PATH, DEFAULT_SETTINGS, RuleLinkerSettingTab, RuleLinkerSettings } from "./settings";
+import { DEFAULT_GLOSSARY_BASENAME, DEFAULT_SETTINGS, RuleLinkerSettingTab, RuleLinkerSettings } from "./settings";
 
 const SKIP_PARENT_SELECTOR = "code, pre, a, button, input, textarea, select";
 
@@ -24,12 +24,12 @@ export default class RuleTermLinkerPlugin extends Plugin {
 		this.addSettingTab(new RuleLinkerSettingTab(this.app, this));
 
 		if (Object.keys(this.settings.terms).length === 0) {
-			this.tryAutoIndex().catch(reportError("auto-index Compendium on load"));
+			this.tryAutoIndex().catch(reportError("auto-index glossary on load"));
 		}
 
 		this.addCommand({
 			id: "rebuild-term-index",
-			name: "Rebuild rule term index from Compendium",
+			name: "Rebuild rule term index from glossary",
 			callback: () => {
 				this.rebuildTermIndex(true).catch(reportError("rebuild term index"));
 			},
@@ -58,56 +58,50 @@ export default class RuleTermLinkerPlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
-	private getCompendiumFolder(): TFolder | null {
-		return locateCompendiumFolder(this.app, this.settings.compendiumPath, DEFAULT_COMPENDIUM_PATH);
+	private getGlossaryFile(): TFile | null {
+		return locateGlossaryFile(this.app, this.settings.glossaryPath, DEFAULT_GLOSSARY_BASENAME);
 	}
 
 	private async tryAutoIndex(): Promise<void> {
-		const folder = this.getCompendiumFolder();
-		if (!folder) return;
-		await this.rebuildTermIndex(false, folder);
+		const file = this.getGlossaryFile();
+		if (!file) return;
+		await this.rebuildTermIndex(false, file);
 	}
 
-	private async rebuildTermIndex(notify: boolean, knownFolder?: TFolder): Promise<void> {
-		const folder = knownFolder ?? this.getCompendiumFolder();
-		if (!folder) {
+	private async rebuildTermIndex(notify: boolean, knownFile?: TFile): Promise<void> {
+		const file = knownFile ?? this.getGlossaryFile();
+		if (!file) {
 			if (notify) {
 				new Notice(
-					`Could not find the DS Compendium (looked for "${this.settings.compendiumPath}"). Set its location in settings.`
+					`Could not find the glossary note (looked for "${this.settings.glossaryPath}"). Set its location in settings.`
 				);
 			}
 			return;
 		}
 		const wantedNames = new Set([...DEFAULT_TERMS, ...Object.keys(this.settings.terms)]);
-		const resolved = resolveTermPaths(folder, wantedNames);
+		const resolved = resolveTermHeadings(this.app, file, wantedNames);
 		this.settings.terms = { ...this.settings.terms, ...resolved };
-		this.settings.compendiumPath = folder.path;
+		this.settings.glossaryPath = file.path;
 		await this.saveSettings();
 		if (notify) {
-			new Notice(`Resolved ${Object.keys(resolved).length} of ${wantedNames.size} rule terms from "${folder.path}".`);
+			new Notice(`Resolved ${Object.keys(resolved).length} of ${wantedNames.size} rule terms from "${file.path}".`);
 		}
 	}
 
 	private isExcluded(filePath: string): boolean {
-		const compendiumPath = this.getCompendiumFolder()?.path ?? this.settings.compendiumPath;
-		if (isWithinFolder(filePath, compendiumPath)) return true;
+		const glossaryPath = this.getGlossaryFile()?.path ?? this.settings.glossaryPath;
+		if (normalizePath(filePath) === normalizePath(glossaryPath)) return true;
 		return this.settings.blacklistedFolders.some((folder) => isWithinFolder(filePath, folder));
 	}
 
 	/**
-	 * Renders rule-term mentions as native internal links at view time,
-	 * without ever touching note content — Compendium updates or edited
-	 * term aliases take effect on the next render, no re-processing needed.
+	 * Renders rule-term mentions as links straight to their heading in the
+	 * glossary note, at view time — no note content is ever edited, so
+	 * editing the glossary or the term list takes effect on the next render.
 	 */
 	private processNode(root: HTMLElement, ctx: MarkdownPostProcessorContext): void {
 		const sourcePath = ctx.sourcePath;
 		if (this.isExcluded(sourcePath) || Object.keys(this.settings.terms).length === 0) return;
-
-		const currentTarget = normalizePath(sourcePath.endsWith(".md") ? sourcePath.slice(0, -3) : sourcePath);
-		const terms = Object.fromEntries(
-			Object.entries(this.settings.terms).filter(([, path]) => normalizePath(path) !== currentTarget)
-		);
-		if (Object.keys(terms).length === 0) return;
 
 		const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
 			acceptNode: (node) => {
@@ -120,19 +114,19 @@ export default class RuleTermLinkerPlugin extends Plugin {
 		const targets: Text[] = [];
 		let current: Node | null;
 		while ((current = walker.nextNode())) {
-			if (findTermMatches(current.textContent ?? "", terms).length > 0) {
+			if (findTermMatches(current.textContent ?? "", this.settings.terms).length > 0) {
 				targets.push(current as Text);
 			}
 		}
 
 		for (const textNode of targets) {
-			this.replaceTextNode(textNode, terms, sourcePath);
+			this.replaceTextNode(textNode, sourcePath);
 		}
 	}
 
-	private replaceTextNode(textNode: Text, terms: Record<string, string>, sourcePath: string): void {
+	private replaceTextNode(textNode: Text, sourcePath: string): void {
 		const text = textNode.textContent ?? "";
-		const matches = findTermMatches(text, terms);
+		const matches = findTermMatches(text, this.settings.terms);
 		if (matches.length === 0) return;
 
 		const fragment = createFragment((frag) => {
