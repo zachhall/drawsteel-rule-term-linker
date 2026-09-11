@@ -2,8 +2,7 @@ import { App, Notice, PluginSettingTab, Setting, normalizePath } from "obsidian"
 import type RuleTermLinkerPlugin from "./main";
 import { ConfirmModal } from "./confirm-modal";
 import { reportError } from "./errors";
-import { locateGlossaryFile, resolveTermHeadings } from "./glossary";
-import { DEFAULT_TERMS } from "./default-terms";
+import { locateGlossaryFile } from "./glossary";
 
 export const DEFAULT_GLOSSARY_PATH = "ds-glossary.md";
 export const DEFAULT_GLOSSARY_BASENAME = "ds-glossary";
@@ -12,6 +11,8 @@ export interface RuleLinkerSettings {
 	glossaryPath: string;
 	blacklistedFolders: string[];
 	terms: Record<string, string>;
+	/** Alias term -> the canonical term name it should link like (e.g. "XP" -> "Experience"). */
+	aliases: Record<string, string>;
 	/** Set once the plugin has attempted to seed the default glossary note, so it only ever does so on first enable. */
 	glossarySeeded: boolean;
 }
@@ -20,6 +21,7 @@ export const DEFAULT_SETTINGS: RuleLinkerSettings = {
 	glossaryPath: DEFAULT_GLOSSARY_PATH,
 	blacklistedFolders: [],
 	terms: {},
+	aliases: {},
 	glossarySeeded: false,
 };
 
@@ -101,28 +103,14 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Rebuild term index")
 			.setDesc(
-				"Resolve the default rule term list (plus any terms you've added below) against headings in the glossary note."
+				"Resolve the default rule term list and aliases (plus anything you've added below) against headings in the glossary note."
 			)
 			.addButton((button) =>
 				button
 					.setButtonText("Rebuild from glossary")
 					.setCta()
 					.onClick(async () => {
-						const file = locateGlossaryFile(
-							this.plugin.app,
-							this.plugin.settings.glossaryPath,
-							DEFAULT_GLOSSARY_BASENAME
-						);
-						if (!file) {
-							new Notice("Could not find the glossary note. Set its location above first.");
-							return;
-						}
-						const wantedNames = new Set([...DEFAULT_TERMS, ...Object.keys(this.plugin.settings.terms)]);
-						const resolved = resolveTermHeadings(this.plugin.app, file, wantedNames);
-						this.plugin.settings.terms = { ...this.plugin.settings.terms, ...resolved };
-						this.plugin.settings.glossaryPath = file.path;
-						await this.plugin.saveSettings();
-						new Notice(`Resolved ${Object.keys(resolved).length} of ${wantedNames.size} rule terms.`);
+						await this.plugin.rebuildTermIndex(true).catch(reportError("rebuild term index"));
 						this.display();
 					})
 			);
@@ -206,6 +194,57 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 						return;
 					}
 					this.plugin.settings.terms[newTerm] = normalizePath(newPath);
+					await this.plugin.saveSettings();
+					this.display();
+				})
+			);
+
+		containerEl.createEl("h3", { text: `Term aliases (${Object.keys(this.plugin.settings.aliases).length})` });
+		containerEl.createEl("p", {
+			text: 'A term that links wherever another term does, instead of its own heading — e.g. "XP" links wherever "Experience" does. Rebuild from glossary (above) keeps an alias\'s target in sync with its canonical term.',
+			cls: "setting-item-description",
+		});
+
+		const sortedAliases = Object.entries(this.plugin.settings.aliases).sort((a, b) => a[0].localeCompare(b[0]));
+		for (const [alias, canonical] of sortedAliases) {
+			new Setting(containerEl)
+				.setName(alias)
+				.addText((text) =>
+					text
+						.setPlaceholder("Canonical term")
+						.setValue(canonical)
+						.onChange(async (value) => {
+							this.plugin.settings.aliases[alias] = value.trim();
+							await this.plugin.saveSettings();
+						})
+				)
+				.addExtraButton((button) =>
+					button
+						.setIcon("trash")
+						.setTooltip("Remove")
+						.onClick(async () => {
+							delete this.plugin.settings.aliases[alias];
+							await this.plugin.saveSettings();
+							this.display();
+						})
+				);
+		}
+
+		let newAlias = "";
+		let newCanonical = "";
+		new Setting(containerEl)
+			.setName("Add alias")
+			.addText((text) => text.setPlaceholder("Alias (e.g. XP)").onChange((value) => (newAlias = value.trim())))
+			.addText((text) =>
+				text.setPlaceholder("Canonical term (e.g. Experience)").onChange((value) => (newCanonical = value.trim()))
+			)
+			.addButton((button) =>
+				button.setButtonText("Add").onClick(async () => {
+					if (!newAlias || !newCanonical) {
+						new Notice("Enter both an alias and the term it should link like.");
+						return;
+					}
+					this.plugin.settings.aliases[newAlias] = newCanonical;
 					await this.plugin.saveSettings();
 					this.display();
 				})

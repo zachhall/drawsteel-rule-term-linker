@@ -1,4 +1,5 @@
 import { MarkdownPostProcessorContext, Notice, Plugin, TFile, normalizePath } from "obsidian";
+import { DEFAULT_ALIASES } from "./aliases";
 import { DEFAULT_TERMS } from "./default-terms";
 import GLOSSARY_TEMPLATE from "./ds-glossary.md";
 import { reportError } from "./errors";
@@ -105,6 +106,7 @@ export default class RuleTermLinkerPlugin extends Plugin {
 			...data,
 			blacklistedFolders: data?.blacklistedFolders ?? [],
 			terms: data?.terms ?? {},
+			aliases: data?.aliases ?? {},
 		};
 	}
 
@@ -161,7 +163,13 @@ export default class RuleTermLinkerPlugin extends Plugin {
 		await this.rebuildTermIndex(false, file);
 	}
 
-	private async rebuildTermIndex(notify: boolean, knownFile?: TFile): Promise<void> {
+	/**
+	 * Resolves the default (plus any user-added) terms and aliases against
+	 * the glossary note's current headings. Shared by the first-load
+	 * auto-index, the command palette, and the settings tab's button, so
+	 * they all prune stale entries and resolve aliases the same way.
+	 */
+	async rebuildTermIndex(notify: boolean, knownFile?: TFile): Promise<void> {
 		const file = knownFile ?? this.getGlossaryFile();
 		if (!file) {
 			if (notify) {
@@ -171,14 +179,35 @@ export default class RuleTermLinkerPlugin extends Plugin {
 			}
 			return;
 		}
-		const wantedNames = new Set([...DEFAULT_TERMS, ...Object.keys(this.settings.terms)]);
-		const resolved = resolveTermHeadings(this.app, file, wantedNames);
+
+		// Default aliases are merged in every rebuild, same as DEFAULT_TERMS.
+		this.settings.aliases = { ...this.settings.aliases, ...DEFAULT_ALIASES };
+
+		const wantedNames = new Set([
+			...DEFAULT_TERMS,
+			...Object.keys(this.settings.terms),
+			...Object.values(this.settings.aliases),
+		]);
+		const resolvedTerms = resolveTermHeadings(this.app, file, wantedNames);
+
+		// An alias (e.g. "XP") has no heading of its own — it links wherever
+		// its canonical term (e.g. "Experience") does, so it's resolved from
+		// that term's target rather than by heading lookup.
+		const resolvedAliases: Record<string, string> = {};
+		for (const [alias, canonical] of Object.entries(this.settings.aliases)) {
+			const target = resolvedTerms[canonical];
+			if (target) resolvedAliases[alias] = target;
+		}
+
+		const resolved = { ...resolvedTerms, ...resolvedAliases };
 
 		// A term pointing at this glossary note whose heading is no longer
 		// there (renamed, deleted) is pruned rather than left dangling —
 		// otherwise it keeps matching and linking to a heading that doesn't
 		// exist. Terms pointing elsewhere (a manual custom target) are left
-		// alone regardless of what this resolve pass found.
+		// alone regardless of what this resolve pass found. An alias whose
+		// canonical term stopped resolving is pruned the same way, since it
+		// won't be in `resolved` either.
 		const glossaryBase = normalizePath(file.path.endsWith(".md") ? file.path.slice(0, -3) : file.path);
 		const kept = Object.fromEntries(
 			Object.entries(this.settings.terms).filter(([term, target]) => {

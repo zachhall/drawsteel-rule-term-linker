@@ -10,6 +10,7 @@ Backlinks Draw Steel rule terms in your notes to their definitions in a glossary
 
 - Creates `ds-glossary.md` at your vault root the first time you enable the plugin, if no glossary note already exists — one heading per term (e.g. `### Prone`), transcribed from the DS Compendium's Introduction chapter. Runs once only; it never overwrites an existing note, even if you later delete or rename the one it created.
 - Ships with a default term list — the ~240 bolded glossary entries from the Compendium's Introduction chapter — resolved against the headings actually present in your glossary note.
+- Supports aliases — a term with no heading of its own that links wherever another term does (e.g. "XP" links to `### Experience`, ships as a default alias).
 - Renders every mention of a known rule term as a link straight to its heading in the glossary note (`ds-glossary#Prone`), live at view time — no note content is ever edited, so it works on hand-written notes, imported hero notes, and the glossary note itself alike, and stays current the moment a heading changes.
 - Links get Obsidian's native Page Preview (which scopes the hover popup to that heading) and click-to-navigate, same as a hand-written `[[wikilink#Heading]]`.
 - Skips code blocks/spans and text already inside a link, so it never double-links or mangles fenced code.
@@ -52,6 +53,7 @@ Backlinks Draw Steel rule terms in your notes to their definitions in a glossary
 - **Rebuild term index** — resolves the default term list, plus anything you've added, against headings currently in the glossary note. Also drops any term that used to point at a glossary heading that's since been renamed or removed, so it stops linking to a dead heading.
 - **Blacklisted folders** — notes under these folders (and subfolders) are never scanned or linked.
 - **Rule terms** — the term → glossary heading table used for linking, seeded from the default list. Delete entries you don't want, edit a target (`ds-glossary#Heading`), or add your own term.
+- **Term aliases** — a term → canonical-term table for terms with no heading of their own (e.g. `XP` → `Experience`). Resolved to the canonical term's actual target on rebuild, so it stays in sync if that target changes.
 
 ## Building from source
 
