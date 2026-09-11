@@ -1,5 +1,4 @@
 import { App, Modal, Setting } from "obsidian";
-import { styleAsDestructive } from "./ui-helpers";
 
 export class ConfirmModal extends Modal {
 	constructor(
@@ -18,13 +17,15 @@ export class ConfirmModal extends Modal {
 		contentEl.createEl("p", { text: this.message });
 		new Setting(contentEl)
 			.addButton((button) => button.setButtonText("Cancel").onClick(() => this.close()))
-			.addButton((button) => {
-				button.setButtonText(this.confirmText).onClick(() => {
-					this.close();
-					this.onConfirm();
-				});
-				styleAsDestructive(button);
-			});
+			.addButton((button) =>
+				button
+					.setButtonText(this.confirmText)
+					.setDestructive()
+					.onClick(() => {
+						this.close();
+						this.onConfirm();
+					})
+			);
 	}
 
 	onClose(): void {

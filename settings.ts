@@ -11,7 +11,6 @@ import type RuleTermLinkerPlugin from "./main";
 import { ConfirmModal } from "./confirm-modal";
 import { reportError } from "./errors";
 import { locateGlossaryFile } from "./glossary";
-import { styleAsDestructive } from "./ui-helpers";
 
 export const DEFAULT_GLOSSARY_PATH = "ds-glossary.md";
 export const DEFAULT_GLOSSARY_BASENAME = "ds-glossary";
@@ -44,22 +43,16 @@ export const DEFAULT_SETTINGS: RuleLinkerSettings = {
 };
 
 /**
- * Settings tab rendering, in two parallel forms that share the same section
- * methods below:
- *
- * - `display()` — the classic imperative render, still the only thing older
- *   Obsidian versions (pre-1.13.0) know how to call.
- * - `getSettingDefinitions()` — the declarative form 1.13.0+ uses instead
- *   (per Obsidian's own docs, `display()` is "only" a fallback for
- *   supporting versions older than 1.13.0 once this is implemented, and
- *   isn't called at all when this returns a non-empty array).
- *
- * Every section is written once as a method taking the `HTMLElement` (or
- * `Setting`) it renders into, called from both `display()` (passing
- * `containerEl` directly) and from a `SettingDefinitionRender` callback
- * (passing the `Setting`/`group.listEl` the framework hands it) — so
- * there's exactly one implementation of each section's behavior, not two
- * copies that could drift apart.
+ * Settings tab rendering, via Obsidian's declarative settings API
+ * (getSettingDefinitions(), added in 1.13.0 — this plugin's declared
+ * minAppVersion, chosen specifically because it's the newest `@since` tag
+ * among everything this file (and confirm-modal.ts's setDestructive() call)
+ * use).
+ * `display()` — the pre-1.13.0 imperative override — is deliberately not
+ * implemented at all: every client that can run this plugin has the
+ * declarative API, so it would never be called. Each section is still its
+ * own method taking the `Setting`/`HTMLElement` it renders into, purely to
+ * keep the method bodies readable.
  */
 export class RuleLinkerSettingTab extends PluginSettingTab {
 	plugin: RuleTermLinkerPlugin;
@@ -71,38 +64,6 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 	constructor(app: App, plugin: RuleTermLinkerPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
-	}
-
-	/** Re-renders via whichever API is active for this Obsidian version. */
-	private refresh(): void {
-		const withUpdate = this as unknown as { update?: () => void };
-		if (typeof withUpdate.update === "function") {
-			withUpdate.update();
-		} else {
-			this.display();
-		}
-	}
-
-	display(): void {
-		const { containerEl } = this;
-		containerEl.empty();
-
-		this.renderGlossaryLocation(new Setting(containerEl));
-		this.renderSubtleStyling(new Setting(containerEl));
-		this.renderRestoreButton(new Setting(containerEl));
-
-		new Setting(containerEl).setName("Blacklisted folders").setHeading();
-		this.renderBlacklistedFoldersBody(containerEl);
-
-		new Setting(containerEl).setName(`Rule terms (${Object.keys(this.plugin.settings.terms).length})`).setHeading();
-		this.renderRuleTermsBody(containerEl);
-
-		new Setting(containerEl)
-			.setName(`Term aliases (${Object.keys(this.plugin.settings.aliases).length})`)
-			.setHeading();
-		this.renderTermAliasesBody(containerEl);
-
-		this.renderAdvancedSettings(containerEl);
 	}
 
 	getSettingDefinitions(): SettingDefinitionItem[] {
@@ -185,7 +146,7 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 					this.plugin.settings.glossaryPath = file.path;
 					await this.plugin.saveSettings();
 					new Notice(`Found glossary note at "${file.path}".`);
-					this.refresh();
+					this.update();
 				})
 			);
 	}
@@ -210,29 +171,31 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 			.setDesc(
 				"Recreate the default glossary note at the location above and rebuild the term index against it. The note is locked against normal editing once created, so you shouldn't need this often — it's here for edge cases (e.g. content that drifted via sync or another plugin). If a note already exists there, you'll be asked to confirm before it's overwritten."
 			)
-			.addButton((button) => {
-				button.setButtonText("Restore default glossary note").onClick(async () => {
-					const path = normalizePath(this.plugin.settings.glossaryPath || DEFAULT_GLOSSARY_PATH);
-					const existing = this.plugin.app.vault.getAbstractFileByPath(path);
+			.addButton((button) =>
+				button
+					.setButtonText("Restore default glossary note")
+					.setDestructive()
+					.onClick(async () => {
+						const path = normalizePath(this.plugin.settings.glossaryPath || DEFAULT_GLOSSARY_PATH);
+						const existing = this.plugin.app.vault.getAbstractFileByPath(path);
 
-					const restore = () => {
-						this.plugin.restoreDefaultGlossaryNote().catch(reportError("restore default glossary note"));
-					};
+						const restore = () => {
+							this.plugin.restoreDefaultGlossaryNote().catch(reportError("restore default glossary note"));
+						};
 
-					if (existing) {
-						new ConfirmModal(
-							this.plugin.app,
-							"Overwrite existing glossary note?",
-							`Continuing will rewrite "${path}" to its default state, potentially losing any changes you've made to it. This can't be undone.`,
-							"Overwrite",
-							restore
-						).open();
-					} else {
-						restore();
-					}
-				});
-				styleAsDestructive(button);
-			});
+						if (existing) {
+							new ConfirmModal(
+								this.plugin.app,
+								"Overwrite existing glossary note?",
+								`Continuing will rewrite "${path}" to its default state, potentially losing any changes you've made to it. This can't be undone.`,
+								"Overwrite",
+								restore
+							).open();
+						} else {
+							restore();
+						}
+					})
+			);
 	}
 
 	private renderBlacklistedFoldersBody(containerEl: HTMLElement): void {
@@ -257,7 +220,7 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 					.onClick(async () => {
 						this.plugin.settings.blacklistedFolders.splice(index, 1);
 						await this.plugin.saveSettings();
-						this.refresh();
+						this.update();
 					})
 			);
 		});
@@ -266,7 +229,7 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 			button.setButtonText("Add blacklisted folder").onClick(async () => {
 				this.plugin.settings.blacklistedFolders.push("");
 				await this.plugin.saveSettings();
-				this.refresh();
+				this.update();
 			})
 		);
 	}
@@ -297,7 +260,7 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 						.onClick(async () => {
 							delete this.plugin.settings.terms[term];
 							await this.plugin.saveSettings();
-							this.refresh();
+							this.update();
 						})
 				);
 		}
@@ -316,7 +279,7 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 					}
 					this.plugin.settings.terms[newTerm] = normalizePath(newPath);
 					await this.plugin.saveSettings();
-					this.refresh();
+					this.update();
 				})
 			);
 	}
@@ -347,7 +310,7 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 						.onClick(async () => {
 							delete this.plugin.settings.aliases[alias];
 							await this.plugin.saveSettings();
-							this.refresh();
+							this.update();
 						})
 				);
 		}
@@ -372,7 +335,7 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 					// its canonical term — without this, a newly-added alias would
 					// silently do nothing until the user separately hit Rebuild.
 					await this.plugin.rebuildTermIndex(true).catch(reportError("rebuild term index"));
-					this.refresh();
+					this.update();
 				})
 			);
 	}
@@ -394,12 +357,14 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 			.setDesc(
 				"Resolve the default rule term list and aliases (plus anything you've added above) against headings currently in the glossary note, and drop any term whose heading no longer exists."
 			)
-			.addButton((button) => {
-				button.setButtonText("Rebuild from glossary").onClick(async () => {
-					await this.plugin.rebuildTermIndex(true).catch(reportError("rebuild term index"));
-					this.refresh();
-				});
-				styleAsDestructive(button);
-			});
+			.addButton((button) =>
+				button
+					.setButtonText("Rebuild from glossary")
+					.setDestructive()
+					.onClick(async () => {
+						await this.plugin.rebuildTermIndex(true).catch(reportError("rebuild term index"));
+						this.update();
+					})
+			);
 	}
 }

@@ -2,7 +2,7 @@
 	"id": "drawsteel-rule-term-linker",
 	"name": "Draw Steel Rule Term Linker",
 	"version": "1.0.3",
-	"minAppVersion": "1.5.1",
+	"minAppVersion": "1.13.0",
 	"description": "Backlinks Draw Steel rule terms in your notes to their entries in the DS Compendium.",
 	"author": "zachhall",
 	"authorUrl": "https://github.com/zachhall",

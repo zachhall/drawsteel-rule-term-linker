@@ -4,7 +4,7 @@ An Obsidian plugin that auto-detects Draw Steel rule terms in your notes and ren
 
 ## Prerequisites
 
-- **Obsidian ≥ 1.5.1**
+- **Obsidian ≥ 1.13.0**
 - **[Draw Steel Elements](https://github.com/SteelCompendium/draw-steel-elements)** — not required to enable this plugin, but it's built with the intent of being used alongside it, with the rule Compendium installed through its settings. Some default terms (e.g. "Surges") link directly into that Compendium.
 
 ## Features
