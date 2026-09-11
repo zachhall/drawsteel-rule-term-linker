@@ -208,13 +208,13 @@ export default class RuleTermLinkerPlugin extends Plugin {
 				if (settled) return;
 				settled = true;
 				this.app.metadataCache.offref(eventRef);
-				clearTimeout(timer);
+				window.clearTimeout(timer);
 				resolve();
 			};
 			const eventRef = this.app.metadataCache.on("changed", (changedFile) => {
 				if (changedFile.path === file.path) finish();
 			});
-			const timer = setTimeout(finish, timeoutMs);
+			const timer = window.setTimeout(finish, timeoutMs);
 		});
 	}
 

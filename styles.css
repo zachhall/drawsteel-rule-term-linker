@@ -22,6 +22,14 @@
 	color: var(--text-error);
 }
 
+/* Hides the placeholder Setting row the declarative settings API (1.13.0+)
+ * auto-creates for a definition entry — used where the section renders its
+ * own heading-equivalent (the Advanced settings <details>/<summary>) instead
+ * of the framework's plain heading row. */
+.ds-rule-linker-hidden-row {
+	display: none;
+}
+
 /*
  * "Subtle Styling" setting — toggled on <body>, so it applies live to every
  * already-rendered link via cascading alone. Scoped to .ds-rule-term-link

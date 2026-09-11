@@ -1,8 +1,17 @@
-import { App, Notice, PluginSettingTab, Setting, normalizePath } from "obsidian";
+import {
+	App,
+	Notice,
+	PluginSettingTab,
+	Setting,
+	SettingDefinitionItem,
+	SettingGroup,
+	normalizePath,
+} from "obsidian";
 import type RuleTermLinkerPlugin from "./main";
 import { ConfirmModal } from "./confirm-modal";
 import { reportError } from "./errors";
 import { locateGlossaryFile } from "./glossary";
+import { styleAsDestructive } from "./ui-helpers";
 
 export const DEFAULT_GLOSSARY_PATH = "ds-glossary.md";
 export const DEFAULT_GLOSSARY_BASENAME = "ds-glossary";
@@ -34,11 +43,29 @@ export const DEFAULT_SETTINGS: RuleLinkerSettings = {
 	dottedUnderline: false,
 };
 
+/**
+ * Settings tab rendering, in two parallel forms that share the same section
+ * methods below:
+ *
+ * - `display()` — the classic imperative render, still the only thing older
+ *   Obsidian versions (pre-1.13.0) know how to call.
+ * - `getSettingDefinitions()` — the declarative form 1.13.0+ uses instead
+ *   (per Obsidian's own docs, `display()` is "only" a fallback for
+ *   supporting versions older than 1.13.0 once this is implemented, and
+ *   isn't called at all when this returns a non-empty array).
+ *
+ * Every section is written once as a method taking the `HTMLElement` (or
+ * `Setting`) it renders into, called from both `display()` (passing
+ * `containerEl` directly) and from a `SettingDefinitionRender` callback
+ * (passing the `Setting`/`group.listEl` the framework hands it) — so
+ * there's exactly one implementation of each section's behavior, not two
+ * copies that could drift apart.
+ */
 export class RuleLinkerSettingTab extends PluginSettingTab {
 	plugin: RuleTermLinkerPlugin;
 	// Not persisted — just keeps "Advanced settings" from re-collapsing on
-	// every display() re-render (e.g. after clicking Rebuild from glossary)
-	// within a single time the settings tab is open.
+	// every re-render (e.g. after clicking Rebuild from glossary) within a
+	// single time the settings tab is open.
 	private advancedOpen = false;
 
 	constructor(app: App, plugin: RuleTermLinkerPlugin) {
@@ -46,11 +73,91 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
+	/** Re-renders via whichever API is active for this Obsidian version. */
+	private refresh(): void {
+		const withUpdate = this as unknown as { update?: () => void };
+		if (typeof withUpdate.update === "function") {
+			withUpdate.update();
+		} else {
+			this.display();
+		}
+	}
+
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
 
+		this.renderGlossaryLocation(new Setting(containerEl));
+		this.renderSubtleStyling(new Setting(containerEl));
+		this.renderRestoreButton(new Setting(containerEl));
+
+		new Setting(containerEl).setName("Blacklisted folders").setHeading();
+		this.renderBlacklistedFoldersBody(containerEl);
+
+		new Setting(containerEl).setName(`Rule terms (${Object.keys(this.plugin.settings.terms).length})`).setHeading();
+		this.renderRuleTermsBody(containerEl);
+
 		new Setting(containerEl)
+			.setName(`Term aliases (${Object.keys(this.plugin.settings.aliases).length})`)
+			.setHeading();
+		this.renderTermAliasesBody(containerEl);
+
+		this.renderAdvancedSettings(containerEl);
+	}
+
+	getSettingDefinitions(): SettingDefinitionItem[] {
+		return [
+			{
+				name: "Glossary note location",
+				render: (setting) => this.renderGlossaryLocation(setting),
+			},
+			{
+				name: "Subtle Styling",
+				render: (setting) => this.renderSubtleStyling(setting),
+			},
+			{
+				name: "Restore default glossary note",
+				render: (setting) => this.renderRestoreButton(setting),
+			},
+			{
+				name: "Blacklisted folders",
+				render: (setting, group: SettingGroup) => {
+					setting.setHeading();
+					this.renderBlacklistedFoldersBody(group.listEl);
+				},
+			},
+			{
+				name: `Rule terms (${Object.keys(this.plugin.settings.terms).length})`,
+				render: (setting, group: SettingGroup) => {
+					setting.setHeading();
+					this.renderRuleTermsBody(group.listEl);
+				},
+			},
+			{
+				name: `Term aliases (${Object.keys(this.plugin.settings.aliases).length})`,
+				render: (setting, group: SettingGroup) => {
+					setting.setHeading();
+					this.renderTermAliasesBody(group.listEl);
+				},
+			},
+			{
+				// No setting.setHeading() here — renderAdvancedSettings() builds
+				// its own <details><summary>Advanced settings</summary> heading
+				// equivalent (a collapsible one, unlike the plain headings the
+				// other sections use), so the definition's own auto-created row
+				// is hidden rather than also labeled, to avoid showing the name
+				// twice.
+				name: "Advanced settings",
+				render: (setting, group: SettingGroup) => {
+					setting.settingEl.addClass("ds-rule-linker-hidden-row");
+					this.renderAdvancedSettings(group.listEl);
+				},
+			},
+		];
+	}
+
+	private renderGlossaryLocation(setting: Setting): void {
+		setting
 			.setName("Glossary note location")
 			.setDesc(
 				`Vault path to the glossary note that terms link to, with one heading per term. Defaults to "${DEFAULT_GLOSSARY_PATH}" at the vault root.`
@@ -78,11 +185,13 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 					this.plugin.settings.glossaryPath = file.path;
 					await this.plugin.saveSettings();
 					new Notice(`Found glossary note at "${file.path}".`);
-					this.display();
+					this.refresh();
 				})
 			);
+	}
 
-		new Setting(containerEl)
+	private renderSubtleStyling(setting: Setting): void {
+		setting
 			.setName("Subtle Styling")
 			.setDesc(
 				"Reduce the amount of styling on links rendered by this plugin, restricted to just a dotted underline. This does not change how manually written [[wikilinks]] or any other links are styled."
@@ -93,39 +202,40 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				})
 			);
+	}
 
-		new Setting(containerEl)
+	private renderRestoreButton(setting: Setting): void {
+		setting
 			.setName("Restore default glossary note")
 			.setDesc(
 				"Recreate the default glossary note at the location above and rebuild the term index against it. The note is locked against normal editing once created, so you shouldn't need this often — it's here for edge cases (e.g. content that drifted via sync or another plugin). If a note already exists there, you'll be asked to confirm before it's overwritten."
 			)
-			.addButton((button) =>
-				button
-					.setButtonText("Restore default glossary note")
-					.setWarning()
-					.onClick(async () => {
-						const path = normalizePath(this.plugin.settings.glossaryPath || DEFAULT_GLOSSARY_PATH);
-						const existing = this.plugin.app.vault.getAbstractFileByPath(path);
+			.addButton((button) => {
+				button.setButtonText("Restore default glossary note").onClick(async () => {
+					const path = normalizePath(this.plugin.settings.glossaryPath || DEFAULT_GLOSSARY_PATH);
+					const existing = this.plugin.app.vault.getAbstractFileByPath(path);
 
-						const restore = () => {
-							this.plugin.restoreDefaultGlossaryNote().catch(reportError("restore default glossary note"));
-						};
+					const restore = () => {
+						this.plugin.restoreDefaultGlossaryNote().catch(reportError("restore default glossary note"));
+					};
 
-						if (existing) {
-							new ConfirmModal(
-								this.plugin.app,
-								"Overwrite existing glossary note?",
-								`Continuing will rewrite "${path}" to its default state, potentially losing any changes you've made to it. This can't be undone.`,
-								"Overwrite",
-								restore
-							).open();
-						} else {
-							restore();
-						}
-					})
-			);
+					if (existing) {
+						new ConfirmModal(
+							this.plugin.app,
+							"Overwrite existing glossary note?",
+							`Continuing will rewrite "${path}" to its default state, potentially losing any changes you've made to it. This can't be undone.`,
+							"Overwrite",
+							restore
+						).open();
+					} else {
+						restore();
+					}
+				});
+				styleAsDestructive(button);
+			});
+	}
 
-		containerEl.createEl("h3", { text: "Blacklisted folders" });
+	private renderBlacklistedFoldersBody(containerEl: HTMLElement): void {
 		containerEl.createEl("p", {
 			text: "Notes in these vault folders (and their subfolders) are never scanned for rule terms.",
 			cls: "setting-item-description",
@@ -147,7 +257,7 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 					.onClick(async () => {
 						this.plugin.settings.blacklistedFolders.splice(index, 1);
 						await this.plugin.saveSettings();
-						this.display();
+						this.refresh();
 					})
 			);
 		});
@@ -156,11 +266,12 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 			button.setButtonText("Add blacklisted folder").onClick(async () => {
 				this.plugin.settings.blacklistedFolders.push("");
 				await this.plugin.saveSettings();
-				this.display();
+				this.refresh();
 			})
 		);
+	}
 
-		containerEl.createEl("h3", { text: `Rule terms (${Object.keys(this.plugin.settings.terms).length})` });
+	private renderRuleTermsBody(containerEl: HTMLElement): void {
 		containerEl.createEl("p", {
 			text: "Term to match in your notes, and the glossary heading it links to. Seeded from a default glossary list; remove any you don't want, or add your own.",
 			cls: "setting-item-description",
@@ -186,7 +297,7 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 						.onClick(async () => {
 							delete this.plugin.settings.terms[term];
 							await this.plugin.saveSettings();
-							this.display();
+							this.refresh();
 						})
 				);
 		}
@@ -205,11 +316,12 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 					}
 					this.plugin.settings.terms[newTerm] = normalizePath(newPath);
 					await this.plugin.saveSettings();
-					this.display();
+					this.refresh();
 				})
 			);
+	}
 
-		containerEl.createEl("h3", { text: `Term aliases (${Object.keys(this.plugin.settings.aliases).length})` });
+	private renderTermAliasesBody(containerEl: HTMLElement): void {
 		containerEl.createEl("p", {
 			text: 'A term that links wherever another term does, instead of its own heading — e.g. "XP" links wherever "Experience" does.',
 			cls: "setting-item-description",
@@ -235,7 +347,7 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 						.onClick(async () => {
 							delete this.plugin.settings.aliases[alias];
 							await this.plugin.saveSettings();
-							this.display();
+							this.refresh();
 						})
 				);
 		}
@@ -260,10 +372,12 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 					// its canonical term — without this, a newly-added alias would
 					// silently do nothing until the user separately hit Rebuild.
 					await this.plugin.rebuildTermIndex(true).catch(reportError("rebuild term index"));
-					this.display();
+					this.refresh();
 				})
 			);
+	}
 
+	private renderAdvancedSettings(containerEl: HTMLElement): void {
 		const advanced = containerEl.createEl("details", { cls: "ds-rule-linker-advanced" });
 		advanced.open = this.advancedOpen;
 		advanced.addEventListener("toggle", () => {
@@ -280,14 +394,12 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 			.setDesc(
 				"Resolve the default rule term list and aliases (plus anything you've added above) against headings currently in the glossary note, and drop any term whose heading no longer exists."
 			)
-			.addButton((button) =>
-				button
-					.setButtonText("Rebuild from glossary")
-					.setWarning()
-					.onClick(async () => {
-						await this.plugin.rebuildTermIndex(true).catch(reportError("rebuild term index"));
-						this.display();
-					})
-			);
+			.addButton((button) => {
+				button.setButtonText("Rebuild from glossary").onClick(async () => {
+					await this.plugin.rebuildTermIndex(true).catch(reportError("rebuild term index"));
+					this.refresh();
+				});
+				styleAsDestructive(button);
+			});
 	}
 }
