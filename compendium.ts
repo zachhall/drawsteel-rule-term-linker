@@ -1,12 +1,5 @@
 import { App, TFile, TFolder, normalizePath } from "obsidian";
 
-const SKIPPED_BASENAMES = new Set(["readme", "license"]);
-
-function shouldSkipFile(file: TFile): boolean {
-	const basename = file.basename.toLowerCase();
-	return basename.startsWith("_") || SKIPPED_BASENAMES.has(basename);
-}
-
 export function findFolder(obsidianApp: App, path: string): TFolder | null {
 	if (!path.trim()) return null;
 	const abstractFile = obsidianApp.vault.getAbstractFileByPath(normalizePath(path));
@@ -27,21 +20,33 @@ export function locateCompendiumFolder(obsidianApp: App, configuredPath: string,
 	return findFolder(obsidianApp, configuredPath) ?? findFolderByName(obsidianApp, fallbackName);
 }
 
-export function buildTermIndexFromCompendium(folder: TFolder): Record<string, string> {
-	const terms: Record<string, string> = {};
+/**
+ * Resolves only the requested term names against notes in the Compendium,
+ * matching by filename (case-insensitive). Unlike a full index of every
+ * Compendium note, this keeps the plugin's active term list limited to
+ * the curated default set plus whatever the user has added.
+ */
+export function resolveTermPaths(folder: TFolder, termNames: Iterable<string>): Record<string, string> {
+	const wanted = new Map<string, string>();
+	for (const name of termNames) {
+		wanted.set(name.toLowerCase(), name);
+	}
+
+	const resolved: Record<string, string> = {};
 
 	const walk = (current: TFolder): void => {
 		for (const child of current.children) {
 			if (child instanceof TFolder) {
 				walk(child);
-			} else if (child instanceof TFile && child.extension === "md" && !shouldSkipFile(child)) {
-				if (!(child.basename in terms)) {
-					terms[child.basename] = child.path.slice(0, -child.extension.length - 1);
+			} else if (child instanceof TFile && child.extension === "md") {
+				const term = wanted.get(child.basename.toLowerCase());
+				if (term && !(term in resolved)) {
+					resolved[term] = child.path.slice(0, -child.extension.length - 1);
 				}
 			}
 		}
 	};
 
 	walk(folder);
-	return terms;
+	return resolved;
 }

@@ -1,5 +1,6 @@
 import { MarkdownPostProcessorContext, Notice, Plugin, TFolder, normalizePath } from "obsidian";
-import { buildTermIndexFromCompendium, locateCompendiumFolder } from "./compendium";
+import { locateCompendiumFolder, resolveTermPaths } from "./compendium";
+import { DEFAULT_TERMS } from "./default-terms";
 import { findTermMatches } from "./linker";
 import { DEFAULT_COMPENDIUM_PATH, DEFAULT_SETTINGS, RuleLinkerSettingTab, RuleLinkerSettings } from "./settings";
 
@@ -77,12 +78,13 @@ export default class RuleTermLinkerPlugin extends Plugin {
 			}
 			return;
 		}
-		const scanned = buildTermIndexFromCompendium(folder);
-		this.settings.terms = { ...this.settings.terms, ...scanned };
+		const wantedNames = new Set([...DEFAULT_TERMS, ...Object.keys(this.settings.terms)]);
+		const resolved = resolveTermPaths(folder, wantedNames);
+		this.settings.terms = { ...this.settings.terms, ...resolved };
 		this.settings.compendiumPath = folder.path;
 		await this.saveSettings();
 		if (notify) {
-			new Notice(`Indexed ${Object.keys(scanned).length} rule terms from "${folder.path}".`);
+			new Notice(`Resolved ${Object.keys(resolved).length} of ${wantedNames.size} rule terms from "${folder.path}".`);
 		}
 	}
 

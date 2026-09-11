@@ -1,6 +1,7 @@
 import { App, Notice, PluginSettingTab, Setting, normalizePath } from "obsidian";
 import type RuleTermLinkerPlugin from "./main";
-import { buildTermIndexFromCompendium, locateCompendiumFolder } from "./compendium";
+import { locateCompendiumFolder, resolveTermPaths } from "./compendium";
+import { DEFAULT_TERMS } from "./default-terms";
 
 export const DEFAULT_COMPENDIUM_PATH = "DS Compendium";
 
@@ -62,7 +63,9 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Rebuild term index")
-			.setDesc("Scan the Compendium folder and (re)populate the term list below from its note titles.")
+			.setDesc(
+				"Resolve the default rule term list (plus any terms you've added below) against notes in the Compendium."
+			)
 			.addButton((button) =>
 				button
 					.setButtonText("Rebuild from Compendium")
@@ -77,10 +80,11 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 							new Notice("Could not find the Compendium folder. Set its location above first.");
 							return;
 						}
-						const scanned = buildTermIndexFromCompendium(folder);
-						this.plugin.settings.terms = { ...this.plugin.settings.terms, ...scanned };
+						const wantedNames = new Set([...DEFAULT_TERMS, ...Object.keys(this.plugin.settings.terms)]);
+						const resolved = resolveTermPaths(folder, wantedNames);
+						this.plugin.settings.terms = { ...this.plugin.settings.terms, ...resolved };
 						await this.plugin.saveSettings();
-						new Notice(`Indexed ${Object.keys(scanned).length} rule terms.`);
+						new Notice(`Resolved ${Object.keys(resolved).length} of ${wantedNames.size} rule terms.`);
 						this.display();
 					})
 			);
@@ -122,7 +126,7 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 
 		containerEl.createEl("h3", { text: `Rule terms (${Object.keys(this.plugin.settings.terms).length})` });
 		containerEl.createEl("p", {
-			text: "Term to match in your notes, and the Compendium note it links to. Rebuild from the Compendium above, or add entries manually for terms that need a custom target.",
+			text: "Term to match in your notes, and the Compendium note it links to. Seeded from a default glossary list; remove any you don't want, or add your own — Rebuild from the Compendium (above) resolves target paths for anything new.",
 			cls: "setting-item-description",
 		});
 

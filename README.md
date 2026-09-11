@@ -9,11 +9,11 @@ Backlinks Draw Steel rule terms in your notes to their entries in the DS Compend
 
 ## Features
 
-- Scans the DS Compendium and builds a term → note index from its file titles (e.g. `Prone.md` → the term "Prone").
+- Ships with a default term list — the bolded glossary entries from the Compendium's Introduction chapter (~230 terms) — resolved against your Compendium's actual notes rather than indexing every file in it.
 - Renders every mention of a known rule term as a link to its Compendium note, live at view time — no note content is ever edited, so it works on hand-written notes, imported hero notes, and the Compendium's own entries alike, and stays current the moment the term index changes.
 - Links get Obsidian's native hover preview and click-to-navigate, same as a hand-written `[[wikilink]]`.
 - Skips code blocks/spans and text already inside a link, so it never double-links or mangles fenced code.
-- Settings let you point at a non-default Compendium location, blacklist folders that should never be scanned, and edit the term list by hand (add aliases or override a term's target).
+- Settings let you point at a non-default Compendium location, blacklist folders that should never be scanned, and remove/add terms from the list (custom additions resolve on the next rebuild too).
 - Notes inside the Compendium folder itself are never linked (they're the link targets).
 
 ## Limitations
@@ -38,15 +38,16 @@ Backlinks Draw Steel rule terms in your notes to their entries in the DS Compend
 ## Usage
 
 1. Install **Draw Steel Elements** and download the DS Compendium from its settings if you haven't already.
-2. Open this plugin's settings and click **Rebuild from Compendium** to index rule terms (it also auto-indexes once on first load if it finds the Compendium at the default location).
+2. Open this plugin's settings and click **Rebuild from Compendium** to resolve the default term list against your Compendium (it also auto-resolves once on first load if it finds the Compendium at the default location).
 3. Open or reload any note — matching terms render as links automatically.
+4. In settings, delete any default terms you don't want linked, or add your own.
 
 ## Settings
 
 - **Compendium location** — vault path to the DS Compendium folder. Defaults to `DS Compendium` at the vault root; use **Auto-detect** to search the vault for it by name.
-- **Rebuild term index** — rescans the Compendium and merges any new/renamed notes into the term list.
+- **Rebuild term index** — resolves the default term list, plus anything you've added, against notes currently in the Compendium.
 - **Blacklisted folders** — notes under these folders (and subfolders) are never scanned or linked.
-- **Rule terms** — the term → Compendium note path table used for linking. Edit or delete entries, or add your own for terms that need a custom target.
+- **Rule terms** — the term → Compendium note path table used for linking, seeded from the default list. Delete entries you don't want, edit a target path, or add your own term.
 
 ## Building from source
 
