@@ -53,6 +53,20 @@ function isWithinFolder(filePath: string, folderPath: string): boolean {
 export default class RuleTermLinkerPlugin extends Plugin {
 	settings: RuleLinkerSettings = DEFAULT_SETTINGS;
 
+	/**
+	 * Keyed by `.ds-feature-container` element rather than created fresh per
+	 * `processNode` call: draw-steel-elements renders an Ability's pieces
+	 * (each tier line, each effect, flavor, etc.) via separate
+	 * `MarkdownRenderer.render()` calls, each of which triggers this plugin's
+	 * post-processor independently — a per-call Map would reset "already
+	 * linked" state between e.g. tier1 and tier2 of the same roll, linking
+	 * "damage" or "push" again in each. A WeakMap survives across those
+	 * calls for as long as the container itself exists, and re-renders
+	 * naturally get a fresh container (and so a fresh entry) instead of manual
+	 * cleanup.
+	 */
+	private linkedTermsByFeature = new WeakMap<Element, Set<string>>();
+
 	async onload(): Promise<void> {
 		await this.loadSettings();
 		this.addSettingTab(new RuleLinkerSettingTab(this.app, this));
@@ -159,11 +173,29 @@ export default class RuleTermLinkerPlugin extends Plugin {
 		}
 		const wantedNames = new Set([...DEFAULT_TERMS, ...Object.keys(this.settings.terms)]);
 		const resolved = resolveTermHeadings(this.app, file, wantedNames);
-		this.settings.terms = { ...this.settings.terms, ...resolved };
+
+		// A term pointing at this glossary note whose heading is no longer
+		// there (renamed, deleted) is pruned rather than left dangling —
+		// otherwise it keeps matching and linking to a heading that doesn't
+		// exist. Terms pointing elsewhere (a manual custom target) are left
+		// alone regardless of what this resolve pass found.
+		const glossaryBase = normalizePath(file.path.endsWith(".md") ? file.path.slice(0, -3) : file.path);
+		const kept = Object.fromEntries(
+			Object.entries(this.settings.terms).filter(([term, target]) => {
+				const pointsAtGlossary = normalizePath(target.split("#")[0]) === glossaryBase;
+				return !pointsAtGlossary || term in resolved;
+			})
+		);
+
+		const prunedCount = Object.keys(this.settings.terms).length - Object.keys(kept).length;
+		this.settings.terms = { ...kept, ...resolved };
 		this.settings.glossaryPath = file.path;
 		await this.saveSettings();
 		if (notify) {
-			new Notice(`Resolved ${Object.keys(resolved).length} of ${wantedNames.size} rule terms from "${file.path}".`);
+			const prunedNote = prunedCount > 0 ? `, dropped ${prunedCount} stale` : "";
+			new Notice(
+				`Resolved ${Object.keys(resolved).length} of ${wantedNames.size} rule terms from "${file.path}"${prunedNote}.`
+			);
 		}
 	}
 
@@ -199,9 +231,8 @@ export default class RuleTermLinkerPlugin extends Plugin {
 			}
 		}
 
-		const linkedByFeature = new Map<Element, Set<string>>();
 		for (const textNode of targets) {
-			this.replaceTextNode(textNode, sourcePath, linkedByFeature);
+			this.replaceTextNode(textNode, sourcePath);
 		}
 	}
 
@@ -209,24 +240,24 @@ export default class RuleTermLinkerPlugin extends Plugin {
 	 * Within a single Ability block (`.ds-feature-container`), only the
 	 * first mention of each term gets linked — repeats of "Prone" further
 	 * down the same Ability stay plain text. Outside any Ability block,
-	 * every mention still links; `linkedByFeature` only tracks state per
-	 * container, so unrelated prose is never affected by it.
+	 * every mention still links; `linkedTermsByFeature` only tracks state
+	 * per container, so unrelated prose is never affected by it.
 	 */
-	private replaceTextNode(textNode: Text, sourcePath: string, linkedByFeature: Map<Element, Set<string>>): void {
+	private replaceTextNode(textNode: Text, sourcePath: string): void {
 		const text = textNode.textContent ?? "";
 		let matches = findTermMatches(text, this.settings.terms);
 		if (matches.length === 0) return;
 
 		const container = textNode.parentElement?.closest(FEATURE_CONTAINER_SELECTOR) ?? undefined;
 		if (container) {
-			const seen = linkedByFeature.get(container) ?? new Set<string>();
+			const seen = this.linkedTermsByFeature.get(container) ?? new Set<string>();
 			matches = matches.filter((match) => {
 				const key = match.matchedText.toLowerCase();
 				if (seen.has(key)) return false;
 				seen.add(key);
 				return true;
 			});
-			linkedByFeature.set(container, seen);
+			this.linkedTermsByFeature.set(container, seen);
 			if (matches.length === 0) return;
 		}
 
