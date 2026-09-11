@@ -1,6 +1,6 @@
 {
 	"name": "drawsteel-rule-term-linker",
-	"version": "1.0.3",
+	"version": "1.0.4",
 	"description": "Backlinks Draw Steel rule terms in your notes to their entries in the DS Compendium.",
 	"main": "main.js",
 	"scripts": {
