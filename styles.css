@@ -41,6 +41,14 @@ body.ds-rule-term-linker-dotted-underline .ds-rule-term-link {
     text-decoration-style: dotted;
     text-decoration-color: var(--color-accent);
     color: var(--text-normal);
+    /* This selector (two classes) can end up more specific than a theme's
+     * own "keep links bold inside **bold** text" override, even though we
+     * never set font-weight ourselves -- so a term inside bold text could
+     * silently lose its bold the moment Subtle Styling is turned on.
+     * Forcing inherit here guarantees the link always takes whatever
+     * weight its surrounding text already has (bold or not), regardless
+     * of what the active theme does for plain internal-links. */
+    font-weight: inherit !important;
 }
 
 body.ds-rule-term-linker-dotted-underline .ds-rule-term-link:hover {
