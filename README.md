@@ -1,6 +1,6 @@
 # Draw Steel Rule Term Linker
 
-Backlinks Draw Steel rule terms in your notes to their definitions in a glossary note.
+An Obsidian plugin that auto-detects Draw Steel rule terms in your notes and renders a `[[wikilink]]` pointing to a note with their definition stored. Hover over a rendered link and quickly see a definition. Uses the glossary from Chapter 1 of the Draw Steel Heroes rulebook as a built-in default, but also allows for user-defined terms and locations of their definitions.
 
 ## Prerequisites
 
