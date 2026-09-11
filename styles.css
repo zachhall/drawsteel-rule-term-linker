@@ -23,15 +23,16 @@
 }
 
 /*
- * "Dotted underline style" setting — toggled on <body>, so it applies live
- * to every already-rendered link via cascading alone. Scoped to
- * .ds-rule-term-link specifically, which only this plugin's own generated
- * links carry, so manually written [[wikilinks]] and other plugins' links
- * are never affected.
+ * "Subtle Styling" setting — toggled on <body>, so it applies live to every
+ * already-rendered link via cascading alone. Scoped to .ds-rule-term-link
+ * specifically, which only this plugin's own generated links carry, so
+ * manually written [[wikilinks]] and other plugins' links are never affected.
  */
 body.ds-rule-term-linker-dotted-underline .ds-rule-term-link {
-	text-decoration-line: underline;
-	text-decoration-style: dotted;
+    text-decoration-line: underline;
+    text-decoration-style: dotted;
+    text-decoration-color: var(--color-accent);
+    color: var(--text-normal);
 }
 
 body.ds-rule-term-linker-dotted-underline .ds-rule-term-link:hover {

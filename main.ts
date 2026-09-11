@@ -40,7 +40,7 @@ const EFFECT_KEY_SELECTOR = ".ds-pr-effect-key";
 // Term-detection scope for "first occurrence only" dedup: one Ability block.
 const FEATURE_CONTAINER_SELECTOR = ".ds-feature-container";
 
-// Toggled on <body> to match the "Dotted underline style" setting — styled
+// Toggled on <body> to match the "Subtle Styling" setting — styled
 // in styles.css against .ds-rule-term-link, so it applies live to every
 // already-rendered link via CSS alone, with no re-render needed.
 const DOTTED_UNDERLINE_BODY_CLASS = "ds-rule-term-linker-dotted-underline";

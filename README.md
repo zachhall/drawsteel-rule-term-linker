@@ -44,7 +44,7 @@ See [DOCUMENTATION.md](DOCUMENTATION.md) for the full details on how linking, te
 ## Settings
 
 - **Glossary note location** — where the glossary note lives, with auto-detect.
-- **Dotted underline style** — optional alternate styling for this plugin's own links only.
+- **Subtle Styling** — reduce this plugin's own links to just a dotted underline, without affecting any other link styling.
 - **Restore default glossary note** — recreate it from the bundled default.
 - **Blacklisted folders** — folders never scanned for rule terms (defaults to `DS Compendium`).
 - **Rule terms** — the term → target table used for linking.

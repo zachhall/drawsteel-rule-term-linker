@@ -45,7 +45,7 @@ Aliases are terms with no heading of their own that link wherever another (canon
 
 **Glossary note location** — vault path to the glossary note. Defaults to `ds-glossary.md` at the vault root. **Auto-detect** searches the vault for a note named `ds-glossary` by name if the configured path doesn't resolve.
 
-**Dotted underline style** — off by default (the theme's normal internal-link styling). When on, this plugin's own links render with a dotted underline that switches to solid on hover, applied via a class toggled on `<body>` so it takes effect immediately for links already on screen, no reload needed. Scoped to the `.ds-rule-term-link` class this plugin's links carry specifically — manually written `[[wikilinks]]` and links from any other plugin are untouched either way.
+**Subtle Styling** — off by default (the theme's normal internal-link styling). When on, this plugin's own links are reduced to just a dotted underline, switching to solid on hover, applied via a class toggled on `<body>` so it takes effect immediately for links already on screen, no reload needed. Scoped to the `.ds-rule-term-link` class this plugin's links carry specifically — manually written `[[wikilinks]]` and links from any other plugin are untouched either way.
 
 **Restore default glossary note** — recreates the default glossary note at the configured location and rebuilds the term index against it. The note is locked against normal editing (see above), so this is mainly an edge-case recovery tool — if a note already exists there, you'll be asked to confirm before it's overwritten, since continuing discards its current content.
 
