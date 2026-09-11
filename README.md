@@ -5,10 +5,10 @@ Backlinks Draw Steel rule terms in your notes to their definitions in a glossary
 ## Prerequisites
 
 - **Obsidian ≥ 1.5.0**
-- A glossary note in your vault with one heading per term (e.g. `### Prone`). A ready-made `ds-glossary.md`, transcribed from the DS Compendium's Introduction chapter, ships alongside this plugin's source — copy it to your vault root, or point the plugin at your own.
 
 ## Features
 
+- Creates `ds-glossary.md` at your vault root the first time you enable the plugin, if no glossary note already exists — one heading per term (e.g. `### Prone`), transcribed from the DS Compendium's Introduction chapter. Runs once only; it never overwrites an existing note, even if you later delete or rename the one it created.
 - Ships with a default term list — the ~240 bolded glossary entries from the Compendium's Introduction chapter — resolved against the headings actually present in your glossary note.
 - Renders every mention of a known rule term as a link straight to its heading in the glossary note (`ds-glossary#Prone`), live at view time — no note content is ever edited, so it works on hand-written notes, imported hero notes, and the glossary note itself alike, and stays current the moment a heading changes.
 - Links get Obsidian's native Page Preview (which scopes the hover popup to that heading) and click-to-navigate, same as a hand-written `[[wikilink#Heading]]`.
@@ -38,8 +38,8 @@ Backlinks Draw Steel rule terms in your notes to their definitions in a glossary
 
 ## Usage
 
-1. Add a glossary note to your vault with one `### Term` heading per entry — copy this repo's `ds-glossary.md` to your vault root, or write your own.
-2. Open this plugin's settings and click **Rebuild from glossary** to resolve the default term list against your glossary's headings (it also auto-resolves once on first load if it finds a note named `ds-glossary` at the vault root).
+1. Enable the plugin. If no glossary note exists in your vault yet, `ds-glossary.md` is created at the vault root automatically (skip this if you'd rather write your own — just make sure it exists before enabling, one `### Term` heading per entry).
+2. Open this plugin's settings and click **Rebuild from glossary** to resolve the default term list against your glossary's headings (it also auto-resolves once on first load).
 3. Open or reload any note — matching terms render as links automatically.
 4. In settings, delete any default terms you don't want linked, or add your own.
 

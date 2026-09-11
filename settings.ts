@@ -10,12 +10,15 @@ export interface RuleLinkerSettings {
 	glossaryPath: string;
 	blacklistedFolders: string[];
 	terms: Record<string, string>;
+	/** Set once the plugin has attempted to seed the default glossary note, so it only ever does so on first enable. */
+	glossarySeeded: boolean;
 }
 
 export const DEFAULT_SETTINGS: RuleLinkerSettings = {
 	glossaryPath: DEFAULT_GLOSSARY_PATH,
 	blacklistedFolders: [],
 	terms: {},
+	glossarySeeded: false,
 };
 
 export class RuleLinkerSettingTab extends PluginSettingTab {

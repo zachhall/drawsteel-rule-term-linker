@@ -1,8 +1,15 @@
 import { MarkdownPostProcessorContext, Notice, Plugin, TFile, normalizePath } from "obsidian";
 import { DEFAULT_TERMS } from "./default-terms";
+import GLOSSARY_TEMPLATE from "./ds-glossary.md";
 import { locateGlossaryFile, resolveTermHeadings } from "./glossary";
 import { findTermMatches } from "./linker";
-import { DEFAULT_GLOSSARY_BASENAME, DEFAULT_SETTINGS, RuleLinkerSettingTab, RuleLinkerSettings } from "./settings";
+import {
+	DEFAULT_GLOSSARY_BASENAME,
+	DEFAULT_GLOSSARY_PATH,
+	DEFAULT_SETTINGS,
+	RuleLinkerSettingTab,
+	RuleLinkerSettings,
+} from "./settings";
 
 const SKIP_PARENT_SELECTOR = "code, pre, a, button, input, textarea, select";
 
@@ -22,6 +29,12 @@ export default class RuleTermLinkerPlugin extends Plugin {
 	async onload(): Promise<void> {
 		await this.loadSettings();
 		this.addSettingTab(new RuleLinkerSettingTab(this.app, this));
+
+		if (!this.settings.glossarySeeded) {
+			await this.seedGlossaryNote().catch(reportError("seed default glossary note"));
+			this.settings.glossarySeeded = true;
+			await this.saveSettings();
+		}
 
 		if (Object.keys(this.settings.terms).length === 0) {
 			this.tryAutoIndex().catch(reportError("auto-index glossary on load"));
@@ -60,6 +73,24 @@ export default class RuleTermLinkerPlugin extends Plugin {
 
 	private getGlossaryFile(): TFile | null {
 		return locateGlossaryFile(this.app, this.settings.glossaryPath, DEFAULT_GLOSSARY_BASENAME);
+	}
+
+	/**
+	 * Runs once, on the first ever enable (see the `glossarySeeded` guard in
+	 * onload): if no glossary note exists anywhere in the vault yet, creates
+	 * one at the default path from the bundled template. Never overwrites an
+	 * existing note, and never runs again afterward even if that note is
+	 * later deleted or moved.
+	 */
+	private async seedGlossaryNote(): Promise<void> {
+		if (this.getGlossaryFile()) return;
+
+		const path = normalizePath(this.settings.glossaryPath || DEFAULT_GLOSSARY_PATH);
+		if (this.app.vault.getAbstractFileByPath(path)) return;
+
+		await this.app.vault.create(path, GLOSSARY_TEMPLATE);
+		this.settings.glossaryPath = path;
+		new Notice(`Draw Steel Rule Term Linker: created "${path}" with the default glossary. See settings to move it.`);
 	}
 
 	private async tryAutoIndex(): Promise<void> {
