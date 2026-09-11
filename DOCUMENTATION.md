@@ -19,7 +19,7 @@ Links get Obsidian's native Page Preview (scoped to the target heading) and clic
 The following are skipped and never linked:
 - Code blocks and inline code spans, and text already inside a link — so it never double-links or mangles fenced code.
 - Headings (H2/H3).
-- A draw-steel-elements Ability's flavor text.
+- A draw-steel-elements Ability's own name and flavor text.
 - The `Source:` attribution line drawsteel-hero-importer appends to every Ability (identified by its effect-key text, since it shares generic classes with real effects rather than having its own).
 - The contents of `ds-skills`/`ds-stamina` blocks.
 
