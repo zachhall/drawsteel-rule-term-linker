@@ -246,6 +246,10 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 					}
 					this.plugin.settings.aliases[newAlias] = newCanonical;
 					await this.plugin.saveSettings();
+					// An alias has no target of its own until it's resolved against
+					// its canonical term — without this, a newly-added alias would
+					// silently do nothing until the user separately hit Rebuild.
+					await this.plugin.rebuildTermIndex(true).catch(reportError("rebuild term index"));
 					this.display();
 				})
 			);

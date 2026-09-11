@@ -54,7 +54,7 @@ Backlinks Draw Steel rule terms in your notes to their definitions in a glossary
 - **Rebuild term index** — resolves the default term list, plus anything you've added, against headings currently in the glossary note. Also drops any term that used to point at a glossary heading that's since been renamed or removed, so it stops linking to a dead heading. Since the note itself is locked, you'll mainly need this after using Restore default glossary note above, after adding a new alias, or if the note's headings changed some other way (e.g. before the note existed, or edited outside Obsidian).
 - **Blacklisted folders** — notes under these folders (and subfolders) are never scanned or linked.
 - **Rule terms** — the term → glossary heading table used for linking, seeded from the default list. Delete entries you don't want, edit a target (`ds-glossary#Heading`), or add your own term.
-- **Term aliases** — a term → canonical-term table for terms with no heading of their own (e.g. `XP` → `Experience`). Resolved to the canonical term's actual target on rebuild, so it stays in sync if that target changes.
+- **Term aliases** — a term → canonical-term table for terms with no heading of their own (e.g. `XP` → `Experience`). Resolved to the canonical term's actual target automatically when added (a rebuild runs behind the scenes), so it stays in sync if that target changes and links right away without a separate manual rebuild.
 
 ## Building from source
 
