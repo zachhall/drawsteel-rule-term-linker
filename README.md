@@ -5,6 +5,7 @@ Backlinks Draw Steel rule terms in your notes to their definitions in a glossary
 ## Prerequisites
 
 - **Obsidian ≥ 1.5.0**
+- **[Draw Steel Elements](https://github.com/SteelCompendium/draw-steel-elements)** — not required to enable this plugin, but it's built with the intent of being used alongside it, with the rule Compendium installed through its settings. Some default terms (e.g. "Surges") link directly into that Compendium.
 
 ## Features
 
