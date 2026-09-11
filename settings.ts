@@ -27,6 +27,10 @@ export const DEFAULT_SETTINGS: RuleLinkerSettings = {
 
 export class RuleLinkerSettingTab extends PluginSettingTab {
 	plugin: RuleTermLinkerPlugin;
+	// Not persisted — just keeps "Advanced settings" from re-collapsing on
+	// every display() re-render (e.g. after clicking Rebuild from glossary)
+	// within a single time the settings tab is open.
+	private advancedOpen = false;
 
 	constructor(app: App, plugin: RuleTermLinkerPlugin) {
 		super(app, plugin);
@@ -100,21 +104,6 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
-			.setName("Rebuild term index")
-			.setDesc(
-				"Resolve the default rule term list and aliases (plus anything you've added below) against headings in the glossary note. Adding an alias or restoring the default glossary note already do this automatically, so you'll mainly need this by hand if the note's headings changed some other way (e.g. edited outside Obsidian, or synced in from a device without this plugin)."
-			)
-			.addButton((button) =>
-				button
-					.setButtonText("Rebuild from glossary")
-					.setCta()
-					.onClick(async () => {
-						await this.plugin.rebuildTermIndex(true).catch(reportError("rebuild term index"));
-						this.display();
-					})
-			);
-
 		containerEl.createEl("h3", { text: "Blacklisted folders" });
 		containerEl.createEl("p", {
 			text: "Notes in these vault folders (and their subfolders) are never scanned for rule terms.",
@@ -152,7 +141,7 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 
 		containerEl.createEl("h3", { text: `Rule terms (${Object.keys(this.plugin.settings.terms).length})` });
 		containerEl.createEl("p", {
-			text: "Term to match in your notes, and the glossary heading it links to. Seeded from a default glossary list; remove any you don't want, or add your own — Rebuild from glossary (above) resolves target headings for anything new.",
+			text: "Term to match in your notes, and the glossary heading it links to. Seeded from a default glossary list; remove any you don't want, or add your own.",
 			cls: "setting-item-description",
 		});
 
@@ -201,7 +190,7 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 
 		containerEl.createEl("h3", { text: `Term aliases (${Object.keys(this.plugin.settings.aliases).length})` });
 		containerEl.createEl("p", {
-			text: 'A term that links wherever another term does, instead of its own heading — e.g. "XP" links wherever "Experience" does. Rebuild from glossary (above) keeps an alias\'s target in sync with its canonical term.',
+			text: 'A term that links wherever another term does, instead of its own heading — e.g. "XP" links wherever "Experience" does.',
 			cls: "setting-item-description",
 		});
 
@@ -252,6 +241,32 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 					await this.plugin.rebuildTermIndex(true).catch(reportError("rebuild term index"));
 					this.display();
 				})
+			);
+
+		const advanced = containerEl.createEl("details", { cls: "ds-rule-linker-advanced" });
+		advanced.open = this.advancedOpen;
+		advanced.addEventListener("toggle", () => {
+			this.advancedOpen = advanced.open;
+		});
+		advanced.createEl("summary", { text: "Advanced settings" });
+		advanced.createEl("p", {
+			text: "For troubleshooting only — restoring the default glossary note and adding an alias already keep everything above in sync automatically. You shouldn't need this unless something's gone wrong (e.g. the glossary note was edited outside Obsidian).",
+			cls: "setting-item-description ds-rule-linker-advanced-warning",
+		});
+
+		new Setting(advanced)
+			.setName("Rebuild term index")
+			.setDesc(
+				"Resolve the default rule term list and aliases (plus anything you've added above) against headings currently in the glossary note, and drop any term whose heading no longer exists."
+			)
+			.addButton((button) =>
+				button
+					.setButtonText("Rebuild from glossary")
+					.setWarning()
+					.onClick(async () => {
+						await this.plugin.rebuildTermIndex(true).catch(reportError("rebuild term index"));
+						this.display();
+					})
 			);
 	}
 }

@@ -5,3 +5,19 @@
  * (--text-*, --background-*, --interactive-accent, --radius-*, ...) over
  * hardcoded values so the plugin adapts to the user's theme.
  */
+
+.ds-rule-linker-advanced {
+	margin-top: 2em;
+	padding-top: 0.5em;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.ds-rule-linker-advanced > summary {
+	cursor: pointer;
+	font-weight: var(--font-medium);
+	color: var(--text-muted);
+}
+
+.ds-rule-linker-advanced-warning {
+	color: var(--text-error);
+}

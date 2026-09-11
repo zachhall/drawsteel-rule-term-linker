@@ -51,10 +51,10 @@ Backlinks Draw Steel rule terms in your notes to their definitions in a glossary
 
 - **Glossary note location** — vault path to the glossary note. Defaults to `ds-glossary.md` at the vault root; use **Auto-detect** to search the vault for a note named `ds-glossary` by name.
 - **Restore default glossary note** — recreates the default glossary note at the configured location and rebuilds the term index against it. The note is locked against normal editing (see Features), so this is mainly an edge-case recovery tool rather than something you'd need routinely. Warns and asks for confirmation first if a note already exists there, since continuing overwrites it.
-- **Rebuild term index** — resolves the default term list, plus anything you've added, against headings currently in the glossary note. Also drops any term that used to point at a glossary heading that's since been renamed or removed, so it stops linking to a dead heading. Adding an alias or restoring the default glossary note already trigger this automatically, so you'll mainly need it by hand if the note's headings changed some other way (e.g. edited outside Obsidian, or synced in from a device without this plugin).
 - **Blacklisted folders** — notes under these folders (and subfolders) are never scanned or linked.
 - **Rule terms** — the term → glossary heading table used for linking, seeded from the default list. Delete entries you don't want, edit a target (`ds-glossary#Heading`), or add your own term.
 - **Term aliases** — a term → canonical-term table for terms with no heading of their own (e.g. `XP` → `Experience`). Resolved to the canonical term's actual target automatically when added (a rebuild runs behind the scenes), so it stays in sync if that target changes and links right away without a separate manual rebuild.
+- **Advanced settings** (collapsed by default, at the bottom) — **Rebuild term index**, which resolves the default term list and aliases against the glossary note's current headings and drops any that no longer resolve. Adding an alias or restoring the default glossary note already trigger this automatically, so it's only needed by hand for troubleshooting — e.g. the glossary note's headings changed some other way (edited outside Obsidian, or synced in from a device without this plugin).
 
 ## Building from source
 
