@@ -79,14 +79,19 @@ export default class RuleTermLinkerPlugin extends Plugin {
 		this.applyDottedUnderlineClass();
 		this.addSettingTab(new RuleLinkerSettingTab(this.app, this));
 
+		let seededFile: TFile | null = null;
 		if (!this.settings.glossarySeeded) {
-			await this.seedGlossaryNote().catch(reportError("seed default glossary note"));
+			try {
+				seededFile = await this.seedGlossaryNote();
+			} catch (err) {
+				reportError("seed default glossary note")(err);
+			}
 			this.settings.glossarySeeded = true;
 			await this.saveSettings();
 		}
 
 		if (Object.keys(this.settings.terms).length === 0) {
-			this.tryAutoIndex().catch(reportError("auto-index glossary on load"));
+			this.tryAutoIndex(seededFile ?? undefined).catch(reportError("auto-index glossary on load"));
 		}
 
 		this.addCommand({
@@ -140,17 +145,27 @@ export default class RuleTermLinkerPlugin extends Plugin {
 	 * onload): if no glossary note exists anywhere in the vault yet, creates
 	 * one at the default path from the bundled template. Never overwrites an
 	 * existing note, and never runs again afterward even if that note is
-	 * later deleted or moved.
+	 * later deleted or moved. Returns the created file (after waiting for
+	 * its headings to be parsed — see waitForMetadataCacheUpdate) so the
+	 * caller can resolve the term index against it immediately, or null if
+	 * nothing was created because a glossary note already existed.
 	 */
-	private async seedGlossaryNote(): Promise<void> {
-		if (this.getGlossaryFile()) return;
+	private async seedGlossaryNote(): Promise<TFile | null> {
+		if (this.getGlossaryFile()) return null;
 
 		const path = normalizePath(this.settings.glossaryPath || DEFAULT_GLOSSARY_PATH);
-		if (this.app.vault.getAbstractFileByPath(path)) return;
+		if (this.app.vault.getAbstractFileByPath(path)) return null;
 
-		await this.app.vault.create(path, GLOSSARY_TEMPLATE);
+		const file = await this.app.vault.create(path, GLOSSARY_TEMPLATE);
 		this.settings.glossaryPath = path;
 		new Notice(`Draw Steel Rule Term Linker: created "${path}" with the default glossary. See settings to move it.`);
+
+		// Without this, the very first auto-index (right after this resolves)
+		// could run before Obsidian finishes parsing this brand-new file's
+		// headings, resolving little to nothing until the user manually hit
+		// Rebuild from glossary.
+		await this.waitForMetadataCacheUpdate(file);
+		return file;
 	}
 
 	/**
@@ -202,8 +217,8 @@ export default class RuleTermLinkerPlugin extends Plugin {
 		});
 	}
 
-	private async tryAutoIndex(): Promise<void> {
-		const file = this.getGlossaryFile();
+	private async tryAutoIndex(knownFile?: TFile): Promise<void> {
+		const file = knownFile ?? this.getGlossaryFile();
 		if (!file) return;
 		await this.rebuildTermIndex(false, file);
 	}
