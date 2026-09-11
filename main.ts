@@ -3,16 +3,10 @@ import { DEFAULT_ALIASES } from "./aliases";
 import { DEFAULT_TERM_TARGETS, DEFAULT_TERMS } from "./default-terms";
 import GLOSSARY_TEMPLATE from "./ds-glossary.md";
 import { reportError } from "./errors";
-import { locateGlossaryFile, resolveTermHeadings } from "./glossary";
+import { findFile, resolveTermHeadings } from "./glossary";
 import { findTermMatches } from "./linker";
 import { createGlossaryReadOnlyExtension } from "./readonly-glossary";
-import {
-	DEFAULT_GLOSSARY_BASENAME,
-	DEFAULT_GLOSSARY_PATH,
-	DEFAULT_SETTINGS,
-	RuleLinkerSettingTab,
-	RuleLinkerSettings,
-} from "./settings";
+import { DEFAULT_GLOSSARY_PATH, DEFAULT_SETTINGS, RuleLinkerSettingTab, RuleLinkerSettings } from "./settings";
 
 const SKIP_PARENT_SELECTOR = [
 	"code",
@@ -136,14 +130,21 @@ export default class RuleTermLinkerPlugin extends Plugin {
 		document.body.classList.toggle(DOTTED_UNDERLINE_BODY_CLASS, this.settings.dottedUnderline);
 	}
 
+	/**
+	 * Exact configured path only — never scans the vault. Vault-wide lookup
+	 * by basename (`locateGlossaryFile` in glossary.ts) is reserved for the
+	 * settings tab's explicit "Auto-detect" button; every other call site
+	 * here runs automatically (on load, on every render, on every editor
+	 * state change), so it must not be able to enumerate the whole vault.
+	 */
 	private getGlossaryFile(): TFile | null {
-		return locateGlossaryFile(this.app, this.settings.glossaryPath, DEFAULT_GLOSSARY_BASENAME);
+		return findFile(this.app, this.settings.glossaryPath);
 	}
 
 	/**
 	 * Runs once, on the first ever enable (see the `glossarySeeded` guard in
-	 * onload): if no glossary note exists anywhere in the vault yet, creates
-	 * one at the default path from the bundled template. Never overwrites an
+	 * onload): if no glossary note exists at the configured path yet,
+	 * creates one there from the bundled template. Never overwrites an
 	 * existing note, and never runs again afterward even if that note is
 	 * later deleted or moved. Returns the created file (after waiting for
 	 * its headings to be parsed — see waitForMetadataCacheUpdate) so the

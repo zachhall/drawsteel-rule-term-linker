@@ -43,7 +43,7 @@ Aliases are terms with no heading of their own that link wherever another (canon
 
 ## Settings reference
 
-**Glossary note location** — vault path to the glossary note. Defaults to `ds-glossary.md` at the vault root. **Auto-detect** searches the vault for a note named `ds-glossary` by name if the configured path doesn't resolve.
+**Glossary note location** — vault path to the glossary note. Defaults to `ds-glossary.md` at the vault root. **Auto-detect** searches the vault for a note named `ds-glossary` by name if the configured path doesn't resolve — this is the only place the plugin ever scans the full list of files in your vault, and only runs when you click the button. Every other lookup (rendering links, indexing terms, the read-only lock) resolves the configured path directly and does nothing further if it isn't found there.
 
 **Subtle Styling** — off by default (the theme's normal internal-link styling). When on, this plugin's own links are reduced to just a dotted underline, switching to solid on hover, applied via a class toggled on `<body>` so it takes effect immediately for links already on screen, no reload needed. Scoped to the `.ds-rule-term-link` class this plugin's links carry specifically — manually written `[[wikilinks]]` and links from any other plugin are untouched either way.
 
