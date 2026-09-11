@@ -72,7 +72,7 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Restore default glossary note")
 			.setDesc(
-				"Recreate the default glossary note at the location above. The note is locked against normal editing once created, so you shouldn't need this often — it's here for edge cases (e.g. content that drifted via sync or another plugin). If a note already exists there, you'll be asked to confirm before it's overwritten."
+				"Recreate the default glossary note at the location above and rebuild the term index against it. The note is locked against normal editing once created, so you shouldn't need this often — it's here for edge cases (e.g. content that drifted via sync or another plugin). If a note already exists there, you'll be asked to confirm before it's overwritten."
 			)
 			.addButton((button) =>
 				button
@@ -103,7 +103,7 @@ export class RuleLinkerSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Rebuild term index")
 			.setDesc(
-				"Resolve the default rule term list and aliases (plus anything you've added below) against headings in the glossary note. The glossary note itself is locked against normal editing, so you mainly need this after using Restore default glossary note above, after adding a new alias, or if the note's headings changed some other way (e.g. before the note existed, or edited outside Obsidian)."
+				"Resolve the default rule term list and aliases (plus anything you've added below) against headings in the glossary note. Adding an alias or restoring the default glossary note already do this automatically, so you'll mainly need this by hand if the note's headings changed some other way (e.g. edited outside Obsidian, or synced in from a device without this plugin)."
 			)
 			.addButton((button) =>
 				button

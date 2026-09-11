@@ -141,23 +141,51 @@ export default class RuleTermLinkerPlugin extends Plugin {
 
 	/**
 	 * Recreates the glossary note at its configured path from the bundled
-	 * default template, overwriting whatever is there. Callers (the settings
-	 * tab) are responsible for confirming with the user first when a note
-	 * already exists at that path.
+	 * default template, overwriting whatever is there, then rebuilds the
+	 * term index against the freshly-written headings. Callers (the
+	 * settings tab) are responsible for confirming with the user first when
+	 * a note already exists at that path.
 	 */
 	async restoreDefaultGlossaryNote(): Promise<void> {
 		const path = normalizePath(this.settings.glossaryPath || DEFAULT_GLOSSARY_PATH);
 		const existing = this.app.vault.getAbstractFileByPath(path);
 
+		let file: TFile;
 		if (existing instanceof TFile) {
 			await this.app.vault.process(existing, () => GLOSSARY_TEMPLATE);
+			file = existing;
 		} else {
-			await this.app.vault.create(path, GLOSSARY_TEMPLATE);
+			file = await this.app.vault.create(path, GLOSSARY_TEMPLATE);
 		}
 
 		this.settings.glossaryPath = path;
 		await this.saveSettings();
-		new Notice(`Restored the default glossary note at "${path}".`);
+
+		// Obsidian re-parses a file's headings asynchronously after a write;
+		// resolving against metadataCache immediately could still see the
+		// old content, so wait for that file's own "changed" event (with a
+		// timeout fallback in case it never fires) before rebuilding.
+		await this.waitForMetadataCacheUpdate(file);
+		await this.rebuildTermIndex(false, file);
+
+		new Notice(`Restored the default glossary note at "${path}" and rebuilt the term index.`);
+	}
+
+	private waitForMetadataCacheUpdate(file: TFile, timeoutMs = 2000): Promise<void> {
+		return new Promise((resolve) => {
+			let settled = false;
+			const finish = () => {
+				if (settled) return;
+				settled = true;
+				this.app.metadataCache.offref(eventRef);
+				clearTimeout(timer);
+				resolve();
+			};
+			const eventRef = this.app.metadataCache.on("changed", (changedFile) => {
+				if (changedFile.path === file.path) finish();
+			});
+			const timer = setTimeout(finish, timeoutMs);
+		});
 	}
 
 	private async tryAutoIndex(): Promise<void> {
