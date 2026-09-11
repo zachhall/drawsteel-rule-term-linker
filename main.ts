@@ -12,7 +12,34 @@ import {
 	RuleLinkerSettings,
 } from "./settings";
 
-const SKIP_PARENT_SELECTOR = "code, pre, a, button, input, textarea, select";
+const SKIP_PARENT_SELECTOR = [
+	"code",
+	"pre",
+	"a",
+	"button",
+	"input",
+	"textarea",
+	"select",
+	"h2",
+	"h3",
+	// draw-steel-elements code blocks whose content shouldn't be linked.
+	".block-language-ds-skills",
+	".block-language-ds-stamina",
+	// The Ability block's flavor text (draw-steel-elements' FeatureView).
+	".ds-feature-flavor-value",
+].join(", ");
+
+// The "Source: <origin>" line drawsteel-hero-importer appends as the last
+// effect on every Ability — an effect entry like any other, so it shares
+// draw-steel-elements' generic effect classes and needs a content check
+// (its key text) rather than a selector to tell it apart from a real effect.
+const EFFECT_KEY_SELECTOR = ".ds-pr-effect-key";
+
+function isSourceEffect(parent: Element): boolean {
+	const container = parent.closest(".ds-effect-container");
+	const key = container?.querySelector(EFFECT_KEY_SELECTOR);
+	return key?.textContent?.trim().replace(/:$/, "").toLowerCase() === "source";
+}
 
 function isWithinFolder(filePath: string, folderPath: string): boolean {
 	if (!folderPath) return false;
@@ -156,6 +183,7 @@ export default class RuleTermLinkerPlugin extends Plugin {
 			acceptNode: (node) => {
 				const parent = node.parentElement;
 				if (!parent || parent.closest(SKIP_PARENT_SELECTOR)) return NodeFilter.FILTER_REJECT;
+				if (isSourceEffect(parent)) return NodeFilter.FILTER_REJECT;
 				return NodeFilter.FILTER_ACCEPT;
 			},
 		});

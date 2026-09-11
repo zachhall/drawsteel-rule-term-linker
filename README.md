@@ -13,6 +13,7 @@ Backlinks Draw Steel rule terms in your notes to their definitions in a glossary
 - Renders every mention of a known rule term as a link straight to its heading in the glossary note (`ds-glossary#Prone`), live at view time — no note content is ever edited, so it works on hand-written notes, imported hero notes, and the glossary note itself alike, and stays current the moment a heading changes.
 - Links get Obsidian's native Page Preview (which scopes the hover popup to that heading) and click-to-navigate, same as a hand-written `[[wikilink#Heading]]`.
 - Skips code blocks/spans and text already inside a link, so it never double-links or mangles fenced code.
+- Skips headings (H2/H3), a draw-steel-elements Ability's flavor text and its `Source:` attribution line (added by drawsteel-hero-importer), and the contents of `ds-skills`/`ds-stamina` blocks — none of those are meant to be read as rule-term prose.
 - Settings let you point at a non-default glossary note location, blacklist folders that should never be scanned, and remove/add terms from the list (custom additions resolve to a matching heading on the next rebuild too).
 - The glossary note itself is never linked (it's the link target).
 

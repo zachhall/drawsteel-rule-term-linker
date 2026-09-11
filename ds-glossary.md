@@ -154,9 +154,6 @@ A ten-sided die.
 ### d100
 A hundred-sided die, usually rolled using two d10s.
 
-### Damage
-A harmful effect that reduces the Stamina of a creature or object.
-
 ### Damage Immunity
 A trait that allows a target to reduce damage they take of a specific damage type. Damage immunity is expressed as "[damage type] immunity X," or "damage immunity X" to represent immunity to all damage. Damage of the specified type dealt to the target is reduced by X.
 
@@ -358,9 +355,6 @@ A fighting style that comes with equipment to match. Kits are available to most 
 ### Knockback Maneuver
 A maneuver that allows a creature to push away an adjacent creature.
 
-### Level
-A measure of a hero's, creature's, or effect's overall power. The higher the level, the more powerful the hero, creature, or effect. Level 1 is the lowest level in *Draw Steel*, and level 10 is the highest.
-
 ### Leveled Treasure
 A treasure that can be used at will, and which increases in power as its hero wielder gains new levels.
 
@@ -468,9 +462,6 @@ An ancestry of short folk who can slip into shadows to hide.
 
 ### Potency
 A value that determines if a target has a characteristic low enough to be affected by an effect.
-
-### Power Roll
-A roll of 2d10 plus a characteristic score that has three different possible tier outcomes—tier 1, tier 2, or tier 3. A power roll can be an ability roll or a test.
 
 ### Presence
 A characteristic that represents a creature's force of personality.
