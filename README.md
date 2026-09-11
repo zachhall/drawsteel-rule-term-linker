@@ -10,17 +10,16 @@ Backlinks Draw Steel rule terms in your notes to their entries in the DS Compend
 ## Features
 
 - Scans the DS Compendium and builds a term → note index from its file titles (e.g. `Prone.md` → the term "Prone").
-- **Link rule terms in current note** — rewrites the first mention of each known term into a `[[Compendium note|term]]` wikilink.
-- **Link rule terms in entire vault** — same, run across every note in the vault.
-- Skips frontmatter, code blocks/spans, and text already inside a link, so it never double-links or mangles fenced code.
-- Only links the first occurrence of each term per note.
+- Renders every mention of a known rule term as a link to its Compendium note, live at view time — no note content is ever edited, so it works on hand-written notes, imported hero notes, and the Compendium's own entries alike, and stays current the moment the term index changes.
+- Links get Obsidian's native hover preview and click-to-navigate, same as a hand-written `[[wikilink]]`.
+- Skips code blocks/spans and text already inside a link, so it never double-links or mangles fenced code.
 - Settings let you point at a non-default Compendium location, blacklist folders that should never be scanned, and edit the term list by hand (add aliases or override a term's target).
-- Notes inside the Compendium folder itself are never modified.
+- Notes inside the Compendium folder itself are never linked (they're the link targets).
 
 ## Limitations
 
 - Term matching is literal text, case-insensitive — it does not understand plurals, inflections, or synonyms unless you add them as separate term entries.
-- Linking is one-shot per command run, not continuous while typing; re-run the command after adding new prose that mentions a term.
+- Reading view / Live Preview rendering only, per Obsidian's markdown post-processor — raw source mode and non-Obsidian renderers (e.g. GitHub) show the plain term text.
 
 ## Installation
 
@@ -40,7 +39,7 @@ Backlinks Draw Steel rule terms in your notes to their entries in the DS Compend
 
 1. Install **Draw Steel Elements** and download the DS Compendium from its settings if you haven't already.
 2. Open this plugin's settings and click **Rebuild from Compendium** to index rule terms (it also auto-indexes once on first load if it finds the Compendium at the default location).
-3. Run **Link rule terms in current note** on a note, or **Link rule terms in entire vault** to process everything at once.
+3. Open or reload any note — matching terms render as links automatically.
 
 ## Settings
 

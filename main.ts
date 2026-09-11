@@ -1,7 +1,9 @@
-import { MarkdownView, Notice, Plugin, TFile, TFolder, normalizePath } from "obsidian";
+import { MarkdownPostProcessorContext, Notice, Plugin, TFolder, normalizePath } from "obsidian";
 import { buildTermIndexFromCompendium, locateCompendiumFolder } from "./compendium";
-import { linkTermsInText } from "./linker";
+import { findTermMatches } from "./linker";
 import { DEFAULT_COMPENDIUM_PATH, DEFAULT_SETTINGS, RuleLinkerSettingTab, RuleLinkerSettings } from "./settings";
+
+const SKIP_PARENT_SELECTOR = "code, pre, a, button, input, textarea, select";
 
 export function reportError(context: string): (err: unknown) => void {
 	return (err: unknown) => console.error(`Draw Steel Rule Term Linker: ${context} failed`, err);
@@ -25,28 +27,15 @@ export default class RuleTermLinkerPlugin extends Plugin {
 		}
 
 		this.addCommand({
-			id: "link-terms-current-note",
-			name: "Link rule terms in current note",
-			editorCallback: (editor, view) => {
-				if (!(view instanceof MarkdownView) || !view.file) return;
-				this.linkCurrentNote(view.file, editor).catch(reportError("link terms in current note"));
-			},
-		});
-
-		this.addCommand({
-			id: "link-terms-entire-vault",
-			name: "Link rule terms in entire vault",
-			callback: () => {
-				this.linkEntireVault().catch(reportError("link terms in entire vault"));
-			},
-		});
-
-		this.addCommand({
 			id: "rebuild-term-index",
 			name: "Rebuild rule term index from Compendium",
 			callback: () => {
 				this.rebuildTermIndex(true).catch(reportError("rebuild term index"));
 			},
+		});
+
+		this.registerMarkdownPostProcessor((el, ctx) => {
+			this.processNode(el, ctx);
 		});
 	}
 
@@ -103,39 +92,83 @@ export default class RuleTermLinkerPlugin extends Plugin {
 		return this.settings.blacklistedFolders.some((folder) => isWithinFolder(filePath, folder));
 	}
 
-	private async linkCurrentNote(
-		file: TFile,
-		editor: { getValue(): string; setValue(value: string): void }
-	): Promise<void> {
-		if (this.isExcluded(file.path)) {
-			new Notice("This note is in the Compendium or a blacklisted folder — skipped.");
-			return;
-		}
-		const { text, linksAdded } = linkTermsInText(editor.getValue(), this.settings.terms, file.path);
-		if (linksAdded > 0) {
-			editor.setValue(text);
-		}
-		new Notice(linksAdded > 0 ? `Linked ${linksAdded} rule term(s).` : "No new rule terms found.");
-	}
+	/**
+	 * Renders rule-term mentions as native internal links at view time,
+	 * without ever touching note content — Compendium updates or edited
+	 * term aliases take effect on the next render, no re-processing needed.
+	 */
+	private processNode(root: HTMLElement, ctx: MarkdownPostProcessorContext): void {
+		const sourcePath = ctx.sourcePath;
+		if (this.isExcluded(sourcePath) || Object.keys(this.settings.terms).length === 0) return;
 
-	private async linkEntireVault(): Promise<void> {
-		const files = this.app.vault.getMarkdownFiles().filter((file) => !this.isExcluded(file.path));
-		let totalLinks = 0;
-		let notesChanged = 0;
+		const currentTarget = normalizePath(sourcePath.endsWith(".md") ? sourcePath.slice(0, -3) : sourcePath);
+		const terms = Object.fromEntries(
+			Object.entries(this.settings.terms).filter(([, path]) => normalizePath(path) !== currentTarget)
+		);
+		if (Object.keys(terms).length === 0) return;
 
-		for (const file of files) {
-			let linksAdded = 0;
-			await this.app.vault.process(file, (data) => {
-				const result = linkTermsInText(data, this.settings.terms, file.path);
-				linksAdded = result.linksAdded;
-				return result.text;
-			});
-			if (linksAdded > 0) {
-				totalLinks += linksAdded;
-				notesChanged += 1;
+		const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+			acceptNode: (node) => {
+				const parent = node.parentElement;
+				if (!parent || parent.closest(SKIP_PARENT_SELECTOR)) return NodeFilter.FILTER_REJECT;
+				return NodeFilter.FILTER_ACCEPT;
+			},
+		});
+
+		const targets: Text[] = [];
+		let current: Node | null;
+		while ((current = walker.nextNode())) {
+			if (findTermMatches(current.textContent ?? "", terms).length > 0) {
+				targets.push(current as Text);
 			}
 		}
 
-		new Notice(`Linked ${totalLinks} rule term(s) across ${notesChanged} note(s).`);
+		for (const textNode of targets) {
+			this.replaceTextNode(textNode, terms, sourcePath);
+		}
+	}
+
+	private replaceTextNode(textNode: Text, terms: Record<string, string>, sourcePath: string): void {
+		const text = textNode.textContent ?? "";
+		const matches = findTermMatches(text, terms);
+		if (matches.length === 0) return;
+
+		const fragment = createFragment((frag) => {
+			let cursor = 0;
+			for (const match of matches) {
+				if (match.start > cursor) {
+					frag.appendText(text.slice(cursor, match.start));
+				}
+				this.createTermLink(frag, match.matchedText, match.path, sourcePath);
+				cursor = match.end;
+			}
+			if (cursor < text.length) {
+				frag.appendText(text.slice(cursor));
+			}
+		});
+
+		textNode.parentNode?.replaceChild(fragment, textNode);
+	}
+
+	private createTermLink(frag: DocumentFragment, displayText: string, targetPath: string, sourcePath: string): void {
+		const link = frag.createEl("a", {
+			cls: "internal-link ds-rule-term-link",
+			text: displayText,
+			attr: { href: targetPath, "data-href": targetPath },
+		});
+		link.addEventListener("click", (evt) => {
+			evt.preventDefault();
+			this.app.workspace.openLinkText(targetPath, sourcePath).catch(reportError("open rule term link"));
+		});
+		link.addEventListener("mouseover", (evt: MouseEvent) => {
+			this.app.workspace.trigger("hover-link", {
+				event: evt,
+				source: "drawsteel-rule-term-linker",
+				hoverParent: link.parentElement,
+				targetEl: link,
+				linktext: targetPath,
+				sourcePath,
+			});
+		});
 	}
 }
