@@ -107,7 +107,10 @@ export default class RuleTermLinkerPlugin extends Plugin {
 		this.settings = {
 			...DEFAULT_SETTINGS,
 			...data,
-			blacklistedFolders: data?.blacklistedFolders ?? [],
+			// A fresh copy, not the shared DEFAULT_SETTINGS array reference — the
+			// settings tab pushes/splices this in place, which would otherwise
+			// mutate the module-level default for the rest of the session.
+			blacklistedFolders: data?.blacklistedFolders ?? [...DEFAULT_SETTINGS.blacklistedFolders],
 			terms: data?.terms ?? {},
 			aliases: data?.aliases ?? {},
 		};

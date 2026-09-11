@@ -7,6 +7,12 @@ import { locateGlossaryFile } from "./glossary";
 export const DEFAULT_GLOSSARY_PATH = "ds-glossary.md";
 export const DEFAULT_GLOSSARY_BASENAME = "ds-glossary";
 
+// The Compendium is reference material that already cross-references
+// itself; linking every rule term throughout it too would be noisy rather
+// than useful, so it's blacklisted by default (new installs only — an
+// existing data.json's blacklistedFolders is left exactly as the user set it).
+const DEFAULT_BLACKLISTED_FOLDERS = ["DS Compendium"];
+
 export interface RuleLinkerSettings {
 	glossaryPath: string;
 	blacklistedFolders: string[];
@@ -19,7 +25,7 @@ export interface RuleLinkerSettings {
 
 export const DEFAULT_SETTINGS: RuleLinkerSettings = {
 	glossaryPath: DEFAULT_GLOSSARY_PATH,
-	blacklistedFolders: [],
+	blacklistedFolders: DEFAULT_BLACKLISTED_FOLDERS,
 	terms: {},
 	aliases: {},
 	glossarySeeded: false,
