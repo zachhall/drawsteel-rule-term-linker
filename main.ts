@@ -21,6 +21,13 @@ const SKIP_PARENT_SELECTOR = [
 	// draw-steel-elements code blocks whose content shouldn't be linked.
 	".block-language-ds-skills",
 	".block-language-ds-stamina",
+	// The Negotiation tracker's per-interest-level offer text
+	// (draw-steel-elements' PatienceInterestView) is a `display: flex;
+	// justify-content: center` container built around a single text node.
+	// Splitting that text node into text/<a>/text siblings turns each
+	// fragment into its own flex item, so the sentence stops wrapping as one
+	// paragraph and instead breaks apart into separately centered pieces.
+	".ds-nt-interest-offer",
 	// The Ability block's name and flavor text (draw-steel-elements'
 	// FeatureView) -- an Ability's own title shouldn't get self-linked just
 	// because it happens to contain a rule term (e.g. "Draconic Pride").
