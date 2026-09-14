@@ -55,6 +55,17 @@ function isSourceEffect(parent: Element): boolean {
 	return key?.textContent?.trim().replace(/:$/, "").toLowerCase() === "source";
 }
 
+// Ancestors that mark `root` as genuine note content rather than some other
+// plugin's UI (a chat sidebar, a tickets panel, etc.) borrowing
+// MarkdownRenderer.render() to draw its own view -- registerMarkdownPostProcessor
+// fires for every such render, vault-wide, not just the note pane. Confirmed
+// live (obsidian CLI eval against a running vault) that a normal note, a
+// ![[embed]], and a hover-link preview popover all match one of these, while
+// a sidebar chat panel (Claudian) matches neither: its leaf's
+// .workspace-leaf-content carries its own view type (e.g. "claudian-view"),
+// not "markdown", and it isn't a .hover-popover.
+const NOTE_CONTENT_ANCESTOR_SELECTOR = '.workspace-leaf-content[data-type="markdown"], .hover-popover';
+
 function isWithinFolder(filePath: string, folderPath: string): boolean {
 	if (!folderPath) return false;
 	const normalizedFolder = normalizePath(folderPath);
@@ -309,6 +320,11 @@ export default class RuleTermLinkerPlugin extends Plugin {
 	}
 
 	private isExcluded(filePath: string): boolean {
+		// registerMarkdownPostProcessor fires for any MarkdownRenderer.render()
+		// call vault-wide, including other plugins drawing their own UI (e.g. a
+		// chat sidebar) with no real backing note -- those pass an empty
+		// sourcePath. A real note render always resolves to an actual TFile.
+		if (!filePath || !(this.app.vault.getAbstractFileByPath(filePath) instanceof TFile)) return true;
 		if (this.isGlossaryPath(filePath)) return true;
 		return this.settings.blacklistedFolders.some((folder) => isWithinFolder(filePath, folder));
 	}
@@ -322,6 +338,21 @@ export default class RuleTermLinkerPlugin extends Plugin {
 		const sourcePath = ctx.sourcePath;
 		if (this.isExcluded(sourcePath) || Object.keys(this.settings.terms).length === 0) return;
 
+		// `root` is not reliably attached to the workspace yet at this point --
+		// confirmed live (obsidian CLI eval) that an embed's rendered section
+		// is still detached here, becoming connected (with a full ancestor
+		// chain up to its host leaf) only a frame later. The note-vs-other-UI
+		// check below depends on that ancestor chain, so it's deferred one
+		// frame; a plain note or hover-preview popover is already connected by
+		// then too, so this costs everything a one-frame delay before its
+		// terms link, not just embeds.
+		window.requestAnimationFrame(() => {
+			if (!root.isConnected || !root.closest(NOTE_CONTENT_ANCESTOR_SELECTOR)) return;
+			this.linkTermsIn(root, sourcePath);
+		});
+	}
+
+	private linkTermsIn(root: HTMLElement, sourcePath: string): void {
 		const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
 			acceptNode: (node) => {
 				const parent = node.parentElement;
